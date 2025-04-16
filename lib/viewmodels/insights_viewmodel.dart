@@ -1,0 +1,121 @@
+import 'package:flutter/foundation.dart';
+import '../models/insight_model.dart';
+import '../services/insights_service.dart';
+
+class InsightsViewModel extends ChangeNotifier {
+  final InsightsService _insightsService = InsightsService.instance;
+  List<Insight> _insights = [];
+  bool _isLoading = false;
+  bool _isGenerating = false;
+
+  List<Insight> get insights => _insights;
+  bool get isLoading => _isLoading;
+  bool get isGenerating => _isGenerating;
+
+  int get unreadCount => _insights.where((insight) => !insight.isRead).length;
+
+  // Get insights grouped by type
+  Map<String, List<Insight>> get insightsByType {
+    Map<String, List<Insight>> result = {};
+    
+    for (var insight in _insights) {
+      if (!result.containsKey(insight.type)) {
+        result[insight.type] = [];
+      }
+      result[insight.type]!.add(insight);
+    }
+    
+    return result;
+  }
+
+  // Load insights from database
+  Future<void> loadInsights() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      _insights = await _insightsService.getInsights();
+    } catch (e) {
+      print('Error loading insights: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Generate new insights
+  Future<void> generateInsights() async {
+    _isGenerating = true;
+    notifyListeners();
+
+    try {
+      final newInsights = await _insightsService.generateInsights();
+      
+      // Save new insights to database
+      for (var insight in newInsights) {
+        await _insightsService.saveInsight(insight);
+      }
+      
+      // Reload insights
+      await loadInsights();
+    } catch (e) {
+      print('Error generating insights: $e');
+    } finally {
+      _isGenerating = false;
+      notifyListeners();
+    }
+  }
+
+  // Mark insight as read
+  Future<void> markInsightAsRead(int id) async {
+    try {
+      await _insightsService.markAsRead(id);
+      
+      // Update local list
+      final index = _insights.indexWhere((insight) => insight.id == id);
+      if (index != -1) {
+        _insights[index] = _insights[index].copyWith(isRead: true);
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error marking insight as read: $e');
+    }
+  }
+
+  // Dismiss insight
+  Future<void> dismissInsight(int id) async {
+    try {
+      await _insightsService.dismissInsight(id);
+      
+      // Remove from local list
+      _insights.removeWhere((insight) => insight.id == id);
+      notifyListeners();
+    } catch (e) {
+      print('Error dismissing insight: $e');
+    }
+  }
+
+  // Get insights of a specific type
+  List<Insight> getInsightsByType(String type) {
+    return _insights.where((insight) => insight.type == type).toList();
+  }
+
+  // Get unread insights
+  List<Insight> getUnreadInsights() {
+    return _insights.where((insight) => !insight.isRead).toList();
+  }
+
+  // Get insights sorted by relevance
+  List<Insight> getInsightsByRelevance() {
+    final sorted = List<Insight>.from(_insights);
+    sorted.sort((a, b) => (b.relevanceScore ?? 0).compareTo(a.relevanceScore ?? 0));
+    return sorted;
+  }
+
+  // Get most recent insights
+  List<Insight> getRecentInsights(int limit) {
+    final sorted = List<Insight>.from(_insights);
+    sorted.sort((a, b) => b.date.compareTo(a.date));
+    return sorted.take(limit).toList();
+  }
+}
