@@ -7,10 +7,10 @@ class ExpenseFilter extends StatelessWidget {
   final Function(String) onFilterChanged;
 
   const ExpenseFilter({
-    Key? key,
+    super.key,
     required this.selectedFilter,
     required this.onFilterChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +44,7 @@ class ExpenseFilter extends StatelessWidget {
           }
         },
         backgroundColor: Colors.grey.shade200,
-        selectedColor: AppTheme.primaryColor.withOpacity(0.2),
+        selectedColor: AppTheme.primaryColor.withValues(alpha: 0.2),
         checkmarkColor: AppTheme.primaryColor,
         labelStyle: TextStyle(
           color: isSelected ? AppTheme.primaryColor : Colors.black,

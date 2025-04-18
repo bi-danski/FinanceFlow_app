@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:intl/intl.dart';
+import 'package:logging/logging.dart';
 import '../models/transaction_model.dart';
 import '../models/budget_model.dart';
 import '../models/goal_model.dart';
@@ -13,6 +14,7 @@ class InsightsService {
   static final InsightsService instance = InsightsService._internal();
   final DatabaseService _databaseService = DatabaseService.instance;
   final Random _random = Random();
+  final Logger logger = Logger('InsightsService');
 
   InsightsService._internal();
 
@@ -46,7 +48,7 @@ class InsightsService {
     try {
       return await _databaseService.getInsights();
     } catch (e) {
-      print('Error getting insights: $e');
+      logger.info('Error getting insights: $e');
       return [];
     }
   }
@@ -56,7 +58,7 @@ class InsightsService {
     try {
       return await _databaseService.insertInsight(insight);
     } catch (e) {
-      print('Error saving insight: $e');
+      logger.info('Error saving insight: $e');
       return -1;
     }
   }
@@ -70,7 +72,7 @@ class InsightsService {
       await _databaseService.updateInsight(updatedInsight);
       return true;
     } catch (e) {
-      print('Error marking insight as read: $e');
+      logger.warning('Error marking insight as read: $e');
       return false;
     }
   }
@@ -84,7 +86,7 @@ class InsightsService {
       await _databaseService.updateInsight(updatedInsight);
       return true;
     } catch (e) {
-      print('Error dismissing insight: $e');
+      logger.severe('Error dismissing insight: $e');
       return false;
     }
   }

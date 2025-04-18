@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../viewmodels/transaction_viewmodel.dart';
 import '../../models/transaction_model.dart';
@@ -9,12 +8,10 @@ import '../../widgets/app_navigation_drawer.dart';
 import '../../themes/app_theme.dart';
 import '../../constants/app_constants.dart';
 import '../../views/transactions/transaction_form_screen.dart';
-import 'widgets/expense_list_item.dart';
 import 'widgets/expense_filter.dart';
-import 'widgets/add_expense_button.dart';
 
 class ExpensesScreen extends StatefulWidget {
-  const ExpensesScreen({Key? key}) : super(key: key);
+  const ExpensesScreen({super.key});
 
   @override
   State<ExpensesScreen> createState() => _ExpensesScreenState();
@@ -105,23 +102,25 @@ class _ExpensesScreenState extends State<ExpensesScreen> with SingleTickerProvid
     if (shouldProceed) {
       final result = await transactionViewModel.processMonthlyCarryForward();
       
-      if (result) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Expenses successfully carried forward to next month'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        
-        // Move to the next month to see the carried forward expenses
-        _nextMonth();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to carry forward expenses'),
-            backgroundColor: Colors.red,
-          ),
-        );
+      if (mounted) {
+        if (result) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Expenses successfully carried forward to next month'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          
+          // Move to the next month to see the carried forward expenses
+          _nextMonth();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to carry forward expenses'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
@@ -132,24 +131,26 @@ class _ExpensesScreenState extends State<ExpensesScreen> with SingleTickerProvid
       builder: (context) => _PaymentDialog(transaction: transaction),
     );
     
-    if (result != null && result > 0) {
+    if (result != null && result > 0 && mounted) {
       final transactionViewModel = Provider.of<TransactionViewModel>(context, listen: false);
       final success = await transactionViewModel.recordPayment(transaction, result);
       
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Payment recorded successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to record payment'),
-            backgroundColor: Colors.red,
-          ),
-        );
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Payment recorded successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to record payment'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }

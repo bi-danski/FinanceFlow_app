@@ -10,7 +10,7 @@ import '../../themes/app_theme.dart';
 import '../../constants/app_constants.dart';
 
 class InsightsScreen extends StatefulWidget {
-  const InsightsScreen({Key? key}) : super(key: key);
+  const InsightsScreen({super.key});
 
   @override
   State<InsightsScreen> createState() => _InsightsScreenState();
@@ -48,23 +48,29 @@ class _InsightsScreenState extends State<InsightsScreen> with SingleTickerProvid
       final insightsViewModel = Provider.of<InsightsViewModel>(context, listen: false);
       await insightsViewModel.generateInsights();
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('New insights generated'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('New insights generated'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to generate insights: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate insights: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() {
-        _isGeneratingInsights = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isGeneratingInsights = false;
+        });
+      }
     }
   }
 
@@ -211,7 +217,7 @@ class _InsightsScreenState extends State<InsightsScreen> with SingleTickerProvid
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: iconColor.withOpacity(0.1),
+                      color: iconColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
@@ -287,7 +293,7 @@ class _InsightsScreenState extends State<InsightsScreen> with SingleTickerProvid
     );
   }
 
-  void _showInsightDetails(Insight insight) async {
+  Future<void> _showInsightDetails(Insight insight) async {
     // Mark as read
     if (!insight.isRead) {
       final insightsViewModel = Provider.of<InsightsViewModel>(context, listen: false);
@@ -295,10 +301,12 @@ class _InsightsScreenState extends State<InsightsScreen> with SingleTickerProvid
     }
     
     // Show detail dialog
-    showDialog(
-      context: context,
-      builder: (context) => _buildInsightDetailDialog(insight),
-    );
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => _buildInsightDetailDialog(insight),
+      );
+    }
   }
 
   Widget _buildInsightDetailDialog(Insight insight) {
@@ -361,7 +369,7 @@ class _InsightsScreenState extends State<InsightsScreen> with SingleTickerProvid
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: iconColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(

@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 
 import '../../models/transaction_model.dart';
-import '../../viewmodels/transaction_viewmodel.dart';
 import '../../themes/app_theme.dart';
 import '../../constants/app_constants.dart';
 import 'transaction_form_screen.dart';
 
-class TransactionDetailsScreen extends StatelessWidget {
+class TransactionDetailsScreen extends StatefulWidget {
   final Transaction transaction;
 
-  const TransactionDetailsScreen({
-    Key? key,
-    required this.transaction,
-  }) : super(key: key);
+  const TransactionDetailsScreen({super.key, required this.transaction});
 
   @override
+  State<TransactionDetailsScreen> createState() => _TransactionDetailsScreenState();
+}
+
+class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
+  @override
   Widget build(BuildContext context) {
-    final isExpense = transaction.amount < 0;
+    final isExpense = widget.transaction.amount < 0;
     final currencyFormat = NumberFormat.currency(symbol: '\$');
     final dateFormat = DateFormat(AppConstants.dateFormat);
     
@@ -33,12 +33,12 @@ class TransactionDetailsScreen extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => TransactionFormScreen(
-                    transaction: transaction,
+                    transaction: widget.transaction,
                     isExpense: isExpense,
                   ),
                 ),
               );
-              
+              if (!context.mounted) return;
               if (result == true) {
                 // Refresh and return to previous screen
                 Navigator.pop(context, true);
@@ -64,7 +64,7 @@ class TransactionDetailsScreen extends StatelessWidget {
             _buildHeader(context, isExpense),
             const SizedBox(height: 24),
             _buildDetailsCard(context, isExpense, currencyFormat, dateFormat),
-            if (transaction.description != null && transaction.description!.isNotEmpty) ...[
+            if (widget.transaction.description != null && widget.transaction.description!.isNotEmpty) ...[
               const SizedBox(height: 16),
               _buildDescriptionCard(context),
             ],
@@ -86,8 +86,8 @@ class TransactionDetailsScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: isExpense 
-                  ? AppTheme.expenseColor.withOpacity(0.1)
-                  : AppTheme.incomeColor.withOpacity(0.1),
+                  ? AppTheme.expenseColor.withAlpha((0.1 * 255).toInt())
+                  : AppTheme.incomeColor.withAlpha((0.1 * 255).toInt()),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -98,7 +98,7 @@ class TransactionDetailsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            transaction.title,
+            widget.transaction.title,
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -106,7 +106,7 @@ class TransactionDetailsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            currencyFormat.format(transaction.amount.abs()),
+            currencyFormat.format(widget.transaction.amount.abs()),
             style: TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
@@ -117,13 +117,13 @@ class TransactionDetailsScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: _getCategoryColor(transaction.category).withOpacity(0.1),
+              color: _getCategoryColor(widget.transaction.category).withAlpha((0.1 * 255).toInt()),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
-              transaction.category,
+              widget.transaction.category,
               style: TextStyle(
-                color: _getCategoryColor(transaction.category),
+                color: _getCategoryColor(widget.transaction.category),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -163,29 +163,29 @@ class TransactionDetailsScreen extends StatelessWidget {
             _buildDetailRow(
               context,
               'Amount',
-              currencyFormat.format(transaction.amount.abs()),
+              currencyFormat.format(widget.transaction.amount.abs()),
               null,
             ),
             const Divider(),
             _buildDetailRow(
               context,
               'Date',
-              dateFormat.format(transaction.date),
+              dateFormat.format(widget.transaction.date),
               null,
             ),
             const Divider(),
             _buildDetailRow(
               context,
               'Category',
-              transaction.category,
-              _getCategoryColor(transaction.category),
+              widget.transaction.category,
+              _getCategoryColor(widget.transaction.category),
             ),
-            if (transaction.paymentMethod != null) ...[
+            if (widget.transaction.paymentMethod != null) ...[
               const Divider(),
               _buildDetailRow(
                 context,
                 'Payment Method',
-                transaction.paymentMethod!,
+                widget.transaction.paymentMethod!,
                 null,
               ),
             ],
@@ -242,7 +242,7 @@ class TransactionDetailsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              transaction.description!,
+              widget.transaction.description!,
               style: const TextStyle(
                 fontSize: 16,
               ),
@@ -281,12 +281,12 @@ class TransactionDetailsScreen extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (context) => TransactionFormScreen(
-                          transaction: transaction,
+                          transaction: widget.transaction,
                           isExpense: isExpense,
                         ),
                       ),
                     );
-                    
+                    if (!context.mounted) return;
                     if (result == true) {
                       // Refresh and return to previous screen
                       Navigator.pop(context, true);
@@ -340,7 +340,7 @@ class TransactionDetailsScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withAlpha((0.1 * 255).toInt()),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -397,6 +397,7 @@ class TransactionDetailsScreen extends StatelessWidget {
   void _deleteTransaction(BuildContext context) {
     // In a real app, you would call the viewmodel to delete the transaction
     // For now, we'll just simulate it
+    if (!context.mounted) return;
     Navigator.pop(context); // Close dialog
     Navigator.pop(context, 'deleted'); // Return to previous screen with result
   }
@@ -404,12 +405,12 @@ class TransactionDetailsScreen extends StatelessWidget {
   void _duplicateTransaction(BuildContext context) {
     // Create a new transaction with the same details but a new date
     final duplicatedTransaction = Transaction(
-      title: transaction.title,
-      amount: transaction.amount,
+      title: widget.transaction.title,
+      amount: widget.transaction.amount,
       date: DateTime.now(), // Use current date for the duplicate
-      category: transaction.category,
-      description: transaction.description,
-      paymentMethod: transaction.paymentMethod,
+      category: widget.transaction.category,
+      description: widget.transaction.description,
+      paymentMethod: widget.transaction.paymentMethod,
     );
     
     Navigator.push(
@@ -417,7 +418,7 @@ class TransactionDetailsScreen extends StatelessWidget {
       MaterialPageRoute(
         builder: (context) => TransactionFormScreen(
           transaction: duplicatedTransaction,
-          isExpense: transaction.amount < 0,
+          isExpense: widget.transaction.amount < 0,
         ),
       ),
     );

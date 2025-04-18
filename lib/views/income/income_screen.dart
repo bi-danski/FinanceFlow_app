@@ -11,7 +11,7 @@ import '../../constants/app_constants.dart';
 import 'income_form_screen.dart';
 
 class IncomeScreen extends StatefulWidget {
-  const IncomeScreen({Key? key}) : super(key: key);
+  const IncomeScreen({super.key});
 
   @override
   State<IncomeScreen> createState() => _IncomeScreenState();
@@ -86,7 +86,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
                   value: type,
                   child: Text(type),
                 )
-              ).toList(),
+              ),
             ],
             icon: const Icon(Icons.filter_list),
           ),
@@ -172,7 +172,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            ...filteredSources.map((source) => _buildIncomeSourceCard(source)).toList(),
+            ...filteredSources.map((source) => _buildIncomeSourceCard(source)),
           ],
         ),
       ),
@@ -526,7 +526,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: _getIncomeTypeColor(type).withOpacity(0.1),
+        color: _getIncomeTypeColor(type).withValues(alpha: 0.1),
         shape: BoxShape.circle,
       ),
       child: FaIcon(

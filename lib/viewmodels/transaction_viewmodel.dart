@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
+import 'package:logging/logging.dart';
 import '../models/transaction_model.dart';
 import '../services/database_service.dart';
 import '../constants/app_constants.dart';
@@ -9,6 +10,7 @@ class TransactionViewModel extends ChangeNotifier {
   List<Transaction> _transactions = [];
   bool _isLoading = false;
   DateTime _selectedMonth = DateTime.now();
+  final Logger logger = Logger('TransactionViewModel');
 
   List<Transaction> get transactions => _transactions;
   bool get isLoading => _isLoading;
@@ -26,7 +28,7 @@ class TransactionViewModel extends ChangeNotifier {
     try {
       _transactions = await _databaseService.getTransactions();
     } catch (e) {
-      print('Error loading transactions: $e');
+      logger.info('Error loading transactions: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -40,7 +42,7 @@ class TransactionViewModel extends ChangeNotifier {
     try {
       _transactions = await _databaseService.getRecentTransactions(limit);
     } catch (e) {
-      print('Error loading recent transactions: $e');
+      logger.info('Error loading recent transactions: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -54,7 +56,7 @@ class TransactionViewModel extends ChangeNotifier {
     try {
       _transactions = await _databaseService.getTransactionsByMonth(month);
     } catch (e) {
-      print('Error loading transactions by month: $e');
+      logger.info('Error loading transactions by month: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -67,7 +69,7 @@ class TransactionViewModel extends ChangeNotifier {
       await loadTransactionsByMonth(_selectedMonth);
       return true;
     } catch (e) {
-      print('Error adding transaction: $e');
+      logger.info('Error adding transaction: $e');
       return false;
     }
   }
@@ -78,7 +80,7 @@ class TransactionViewModel extends ChangeNotifier {
       await loadTransactionsByMonth(_selectedMonth);
       return true;
     } catch (e) {
-      print('Error updating transaction: $e');
+      logger.warning('Error updating transaction: $e');
       return false;
     }
   }
@@ -89,7 +91,7 @@ class TransactionViewModel extends ChangeNotifier {
       await loadTransactionsByMonth(_selectedMonth);
       return true;
     } catch (e) {
-      print('Error deleting transaction: $e');
+      logger.warning('Error deleting transaction: $e');
       return false;
     }
   }
@@ -119,7 +121,7 @@ class TransactionViewModel extends ChangeNotifier {
       await loadTransactionsByMonth(_selectedMonth);
       return true;
     } catch (e) {
-      print('Error recording payment: $e');
+      logger.info('Error recording payment: $e');
       return false;
     }
   }
@@ -137,7 +139,7 @@ class TransactionViewModel extends ChangeNotifier {
       await loadTransactionsByMonth(_selectedMonth);
       return true;
     } catch (e) {
-      print('Error processing monthly carry forward: $e');
+      logger.info('Error processing monthly carry forward: $e');
       return false;
     }
   }

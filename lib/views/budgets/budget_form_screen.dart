@@ -11,9 +11,9 @@ class BudgetFormScreen extends StatefulWidget {
   final Budget? budget; // Null for new budget, non-null for edit
 
   const BudgetFormScreen({
-    Key? key,
+    super.key,
     this.budget,
-  }) : super(key: key);
+  });
 
   @override
   State<BudgetFormScreen> createState() => _BudgetFormScreenState();

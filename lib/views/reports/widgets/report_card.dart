@@ -6,11 +6,11 @@ class ReportCard extends StatelessWidget {
   final List<Widget>? actions;
 
   const ReportCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.child,
     this.actions,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

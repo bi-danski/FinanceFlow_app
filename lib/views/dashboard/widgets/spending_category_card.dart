@@ -4,10 +4,9 @@ import 'package:fl_chart/fl_chart.dart';
 
 import '../../../viewmodels/transaction_viewmodel.dart';
 import '../../../themes/app_theme.dart';
-import '../../../constants/app_constants.dart';
 
 class SpendingCategoryCard extends StatelessWidget {
-  SpendingCategoryCard({Key? key}) : super(key: key);
+  const SpendingCategoryCard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -138,8 +137,14 @@ class SpendingCategoryCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         category,
-                        style: const TextStyle(fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                    Text(
+                      '\$${amount.toStringAsFixed(2)} (${percentage.toStringAsFixed(0)}%)',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
                     ),
                   ],

@@ -37,7 +37,7 @@ class AppTheme {
     colorScheme: ColorScheme.fromSeed(
       seedColor: primaryColor,
       secondary: accentColor,
-      background: backgroundColor,
+      surface: backgroundColor,
     ),
     scaffoldBackgroundColor: backgroundColor,
     cardTheme: const CardTheme(

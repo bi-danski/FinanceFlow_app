@@ -12,12 +12,12 @@ class ExpenseListItem extends StatelessWidget {
   final String category;
 
   const ExpenseListItem({
-    Key? key,
+    super.key,
     required this.title,
     required this.amount,
     required this.date,
     required this.category,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +89,7 @@ class ExpenseListItem extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: _getCategoryColor().withOpacity(0.1),
+                      color: _getCategoryColor().withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -142,7 +142,7 @@ class ExpenseListItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: _getCategoryColor().withOpacity(0.1),
+        color: _getCategoryColor().withValues(alpha: 0.1),
         shape: BoxShape.circle,
       ),
       child: Icon(

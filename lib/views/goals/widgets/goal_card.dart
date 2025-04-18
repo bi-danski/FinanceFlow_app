@@ -13,7 +13,7 @@ class GoalCard extends StatelessWidget {
   final VoidCallback onAddFunds;
 
   const GoalCard({
-    Key? key,
+    super.key,
     required this.name,
     required this.currentAmount,
     required this.targetAmount,
@@ -21,7 +21,7 @@ class GoalCard extends StatelessWidget {
     required this.category,
     required this.onTap,
     required this.onAddFunds,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +56,7 @@ class GoalCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: _getCategoryColor().withOpacity(0.1),
+                      color: _getCategoryColor().withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(

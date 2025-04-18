@@ -10,7 +10,7 @@ import 'widgets/report_card.dart';
 import 'widgets/report_period_selector.dart';
 
 class ReportsScreen extends StatefulWidget {
-  const ReportsScreen({Key? key}) : super(key: key);
+  const ReportsScreen({super.key});
 
   @override
   State<ReportsScreen> createState() => _ReportsScreenState();
@@ -101,7 +101,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final income = 4850.0;
     final expenses = 3210.0;
     final balance = income - expenses;
-    final currencyFormat = NumberFormat.currency(symbol: '\$');
+    final _ = NumberFormat.currency(symbol: '\$');
     
     return Row(
       children: [
@@ -309,6 +309,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    Text('${percentage.toStringAsFixed(1)}%'),
                   ],
                 ),
               );
@@ -357,7 +359,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           horizontalInterval: 1000,
           getDrawingHorizontalLine: (value) {
             return FlLine(
-              color: Colors.grey.withOpacity(0.2),
+              color: Colors.grey.withValues(alpha: 0.2),
               strokeWidth: 1,
             );
           },
@@ -424,7 +426,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             dotData: FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
-              color: AppTheme.incomeColor.withOpacity(0.1),
+              color: AppTheme.incomeColor.withAlpha((0.1 * 255).toInt()),
             ),
           ),
           LineChartBarData(
@@ -436,7 +438,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             dotData: FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
-              color: AppTheme.expenseColor.withOpacity(0.1),
+              color: AppTheme.expenseColor.withAlpha((0.1 * 255).toInt()),
             ),
           ),
         ],
@@ -536,7 +538,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
               BarChartRodData(
                 toY: budget,
-                color: AppTheme.primaryColor.withOpacity(0.5),
+                color: AppTheme.primaryColor.withAlpha((0.5 * 255).toInt()),
                 width: 16,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(6),
@@ -552,8 +554,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Color _getCategoryColor(String category) {
     if (AppTheme.categoryColors.containsKey(category)) {
-      return AppTheme.categoryColors[category]!;
+      return AppTheme.categoryColors[category]!.withAlpha((0.7 * 255).toInt());
     }
-    return AppTheme.categoryColors['Other']!;
+    return AppTheme.categoryColors['Other']!.withAlpha((0.7 * 255).toInt());
   }
 }

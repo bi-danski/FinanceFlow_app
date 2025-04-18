@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:logging/logging.dart';
 import '../models/budget_model.dart';
 import '../services/database_service.dart';
 
@@ -6,6 +7,7 @@ class BudgetViewModel extends ChangeNotifier {
   final DatabaseService _databaseService = DatabaseService.instance;
   List<Budget> _budgets = [];
   bool _isLoading = false;
+  final Logger logger = Logger('BudgetViewModel');
 
   List<Budget> get budgets => _budgets;
   bool get isLoading => _isLoading;
@@ -17,7 +19,7 @@ class BudgetViewModel extends ChangeNotifier {
     try {
       _budgets = await _databaseService.getBudgets();
     } catch (e) {
-      print('Error loading budgets: $e');
+      logger.info('Error loading budgets: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -34,9 +36,10 @@ class BudgetViewModel extends ChangeNotifier {
         await _databaseService.updateBudget(budget);
       }
       await loadBudgets();
+      logger.info('Budget added: $budget');
       return true;
     } catch (e) {
-      print('Error adding/updating budget: $e');
+      logger.warning('Failed to add/update budget: $e');
       return false;
     }
   }
@@ -47,7 +50,7 @@ class BudgetViewModel extends ChangeNotifier {
       await loadBudgets();
       return true;
     } catch (e) {
-      print('Error deleting budget: $e');
+      logger.severe('Unexpected error deleting budget: $e');
       return false;
     }
   }
@@ -66,7 +69,7 @@ class BudgetViewModel extends ChangeNotifier {
       await loadBudgets();
       return true;
     } catch (e) {
-      print('Error updating budget spent: $e');
+      logger.warning('Failed to update budget spent: $e');
       return false;
     }
   }

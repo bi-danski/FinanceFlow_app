@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:fl_chart/fl_chart.dart';
 
 import '../../viewmodels/family_viewmodel.dart';
 import '../../widgets/app_navigation_drawer.dart';
@@ -10,7 +9,7 @@ import 'widgets/family_member_card.dart';
 import 'widgets/add_family_member_button.dart';
 
 class FamilyScreen extends StatefulWidget {
-  const FamilyScreen({Key? key}) : super(key: key);
+  const FamilyScreen({super.key});
 
   @override
   State<FamilyScreen> createState() => _FamilyScreenState();

@@ -11,9 +11,9 @@ class IncomeFormScreen extends StatefulWidget {
   final IncomeSource? incomeSource; // Null for new income source, non-null for edit
 
   const IncomeFormScreen({
-    Key? key,
+    super.key,
     this.incomeSource,
-  }) : super(key: key);
+  });
 
   @override
   State<IncomeFormScreen> createState() => _IncomeFormScreenState();

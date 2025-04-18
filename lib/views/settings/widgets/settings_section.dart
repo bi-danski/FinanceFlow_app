@@ -5,10 +5,10 @@ class SettingsSection extends StatelessWidget {
   final List<Widget> children;
 
   const SettingsSection({
-    Key? key,
+    super.key,
     required this.title,
     required this.children,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:logging/logging.dart';
 import '../models/goal_model.dart';
 import '../services/database_service.dart';
 
 class GoalViewModel extends ChangeNotifier {
   final DatabaseService _databaseService = DatabaseService.instance;
+  final Logger logger = Logger('GoalViewModel');
   List<Goal> _goals = [];
   bool _isLoading = false;
 
@@ -17,7 +19,7 @@ class GoalViewModel extends ChangeNotifier {
     try {
       _goals = await _databaseService.getGoals();
     } catch (e) {
-      print('Error loading goals: $e');
+      logger.info('Error loading goals: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -30,7 +32,7 @@ class GoalViewModel extends ChangeNotifier {
       await loadGoals();
       return true;
     } catch (e) {
-      print('Error adding goal: $e');
+      logger.info('Error adding goal: $e');
       return false;
     }
   }
@@ -51,7 +53,7 @@ class GoalViewModel extends ChangeNotifier {
       await loadGoals();
       return true;
     } catch (e) {
-      print('Error updating goal: $e');
+      logger.warning('Error updating goal: $e');
       return false;
     }
   }

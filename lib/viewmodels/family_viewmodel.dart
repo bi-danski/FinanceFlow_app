@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:logging/logging.dart';
 import '../models/family_member_model.dart';
 import '../services/database_service.dart';
 
 class FamilyViewModel extends ChangeNotifier {
   final DatabaseService _databaseService = DatabaseService.instance;
+  final Logger logger = Logger('FamilyViewModel');
   List<FamilyMember> _familyMembers = [];
   bool _isLoading = false;
 
@@ -17,7 +19,7 @@ class FamilyViewModel extends ChangeNotifier {
     try {
       _familyMembers = await _databaseService.getFamilyMembers();
     } catch (e) {
-      print('Error loading family members: $e');
+      logger.info('Error loading family members: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -30,7 +32,7 @@ class FamilyViewModel extends ChangeNotifier {
       await loadFamilyMembers();
       return true;
     } catch (e) {
-      print('Error adding family member: $e');
+      logger.info('Error adding family member: $e');
       return false;
     }
   }
@@ -49,7 +51,7 @@ class FamilyViewModel extends ChangeNotifier {
       await loadFamilyMembers();
       return true;
     } catch (e) {
-      print('Error updating family member: $e');
+      logger.info('Error updating family member: $e');
       return false;
     }
   }

@@ -6,7 +6,7 @@ import '../../../models/transaction_model.dart';
 import '../../../views/transactions/transaction_details_screen.dart';
 
 class RecentTransactionsCard extends StatelessWidget {
-  RecentTransactionsCard({Key? key}) : super(key: key);
+  RecentTransactionsCard({super.key});
 
   // Mock data for initial UI
   final List<Map<String, dynamic>> _mockTransactions = [

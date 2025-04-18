@@ -9,7 +9,7 @@ import 'widgets/goal_card.dart';
 import 'widgets/add_goal_button.dart';
 
 class GoalsScreen extends StatefulWidget {
-  const GoalsScreen({Key? key}) : super(key: key);
+  const GoalsScreen({super.key});
 
   @override
   State<GoalsScreen> createState() => _GoalsScreenState();

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
-import '../../../viewmodels/transaction_viewmodel.dart';
 import '../../../themes/app_theme.dart';
 
 class UpcomingPaymentsCard extends StatelessWidget {
@@ -187,7 +185,7 @@ class UpcomingPaymentsCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
+                color: statusColor.withAlpha(25),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(

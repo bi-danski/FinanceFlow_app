@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:logging/logging.dart';
 import '../models/insight_model.dart';
 import '../services/insights_service.dart';
 
@@ -7,6 +8,8 @@ class InsightsViewModel extends ChangeNotifier {
   List<Insight> _insights = [];
   bool _isLoading = false;
   bool _isGenerating = false;
+
+  final Logger logger = Logger('InsightsViewModel');
 
   List<Insight> get insights => _insights;
   bool get isLoading => _isLoading;
@@ -36,7 +39,7 @@ class InsightsViewModel extends ChangeNotifier {
     try {
       _insights = await _insightsService.getInsights();
     } catch (e) {
-      print('Error loading insights: $e');
+      logger.info('Error loading insights: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -59,7 +62,7 @@ class InsightsViewModel extends ChangeNotifier {
       // Reload insights
       await loadInsights();
     } catch (e) {
-      print('Error generating insights: $e');
+      logger.info('Error generating insights: $e');
     } finally {
       _isGenerating = false;
       notifyListeners();
@@ -78,7 +81,7 @@ class InsightsViewModel extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('Error marking insight as read: $e');
+      logger.warning('Error marking insight as read: $e');
     }
   }
 
@@ -91,7 +94,7 @@ class InsightsViewModel extends ChangeNotifier {
       _insights.removeWhere((insight) => insight.id == id);
       notifyListeners();
     } catch (e) {
-      print('Error dismissing insight: $e');
+      logger.severe('Error dismissing insight: $e');
     }
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:logging/logging.dart';
 import '../models/loan_model.dart';
 import '../services/database_service.dart';
 
@@ -6,6 +7,7 @@ class LoanViewModel extends ChangeNotifier {
   final DatabaseService _databaseService = DatabaseService.instance;
   List<Loan> _loans = [];
   bool _isLoading = false;
+  final Logger logger = Logger('LoanViewModel');
 
   List<Loan> get loans => _loans;
   bool get isLoading => _isLoading;
@@ -17,7 +19,7 @@ class LoanViewModel extends ChangeNotifier {
     try {
       _loans = await _databaseService.getLoans();
     } catch (e) {
-      print('Error loading loans: $e');
+      logger.info('Error loading loans: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -36,7 +38,7 @@ class LoanViewModel extends ChangeNotifier {
       await loadLoans();
       return true;
     } catch (e) {
-      print('Error adding/updating loan: $e');
+      logger.warning('Error adding/updating loan: $e');
       return false;
     }
   }
@@ -47,7 +49,7 @@ class LoanViewModel extends ChangeNotifier {
       await loadLoans();
       return true;
     } catch (e) {
-      print('Error deleting loan: $e');
+      logger.warning('Error deleting loan: $e');
       return false;
     }
   }
@@ -64,7 +66,7 @@ class LoanViewModel extends ChangeNotifier {
       await loadLoans();
       return true;
     } catch (e) {
-      print('Error recording loan payment: $e');
+      logger.warning('Error recording loan payment: $e');
       return false;
     }
   }

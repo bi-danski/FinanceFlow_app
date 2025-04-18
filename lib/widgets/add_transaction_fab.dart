@@ -6,9 +6,9 @@ class AddTransactionFAB extends StatelessWidget {
   final Function? onTransactionAdded;
 
   const AddTransactionFAB({
-    Key? key,
+    super.key,
     this.onTransactionAdded,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +45,7 @@ class AddTransactionFAB extends StatelessWidget {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppTheme.expenseColor.withOpacity(0.1),
+                    color: AppTheme.expenseColor.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -76,7 +76,7 @@ class AddTransactionFAB extends StatelessWidget {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppTheme.incomeColor.withOpacity(0.1),
+                    color: AppTheme.incomeColor.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -107,7 +107,7 @@ class AddTransactionFAB extends StatelessWidget {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.1),
+                    color: Colors.grey.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(

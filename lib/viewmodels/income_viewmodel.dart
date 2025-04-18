@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:logging/logging.dart';
 import '../models/income_source_model.dart';
 import '../services/database_service.dart';
 
@@ -6,6 +7,7 @@ class IncomeViewModel extends ChangeNotifier {
   final DatabaseService _databaseService = DatabaseService.instance;
   List<IncomeSource> _incomeSources = [];
   bool _isLoading = false;
+  final Logger logger = Logger('IncomeViewModel');
 
   List<IncomeSource> get incomeSources => _incomeSources;
   bool get isLoading => _isLoading;
@@ -17,7 +19,7 @@ class IncomeViewModel extends ChangeNotifier {
     try {
       _incomeSources = await _databaseService.getIncomeSources();
     } catch (e) {
-      print('Error loading income sources: $e');
+      logger.info('Error loading income sources: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -36,7 +38,7 @@ class IncomeViewModel extends ChangeNotifier {
       await loadIncomeSources();
       return true;
     } catch (e) {
-      print('Error adding/updating income source: $e');
+      logger.info('Error adding/updating income source: $e');
       return false;
     }
   }
@@ -47,7 +49,7 @@ class IncomeViewModel extends ChangeNotifier {
       await loadIncomeSources();
       return true;
     } catch (e) {
-      print('Error deleting income source: $e');
+      logger.warning('Error deleting income source: $e');
       return false;
     }
   }

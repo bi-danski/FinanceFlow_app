@@ -12,7 +12,7 @@ import 'loan_form_screen.dart';
 import 'loan_payment_screen.dart';
 
 class LoansScreen extends StatefulWidget {
-  const LoansScreen({Key? key}) : super(key: key);
+  const LoansScreen({super.key});
 
   @override
   State<LoansScreen> createState() => _LoansScreenState();
@@ -83,7 +83,7 @@ class _LoansScreenState extends State<LoansScreen> {
                   value: status,
                   child: Text('$status Loans'),
                 )
-              ).toList(),
+              ),
               const PopupMenuItem(
                 value: 'Overdue',
                 child: Text('Overdue Loans'),
@@ -171,7 +171,7 @@ class _LoansScreenState extends State<LoansScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            ...filteredLoans.map((loan) => _buildLoanCard(loan)).toList(),
+            ...filteredLoans.map((loan) => _buildLoanCard(loan)),
           ],
         ),
       ),
@@ -369,7 +369,7 @@ class _LoansScreenState extends State<LoansScreen> {
           width: 30,
           height: 30,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
+            color: color.withAlpha((0.2 * 255).toInt()),
             shape: BoxShape.circle,
           ),
           child: Center(
@@ -427,7 +427,7 @@ class _LoansScreenState extends State<LoansScreen> {
             Container(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
+                color: statusColor.withAlpha((0.1 * 255).toInt()),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(8),
                   topRight: Radius.circular(8),
@@ -441,7 +441,7 @@ class _LoansScreenState extends State<LoansScreen> {
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.2),
+                          color: statusColor.withAlpha((0.2 * 255).toInt()),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(

@@ -10,9 +10,9 @@ class LoanPaymentScreen extends StatefulWidget {
   final Loan loan;
 
   const LoanPaymentScreen({
-    Key? key,
+    super.key,
     required this.loan,
-  }) : super(key: key);
+  });
 
   @override
   State<LoanPaymentScreen> createState() => _LoanPaymentScreenState();

@@ -8,7 +8,6 @@ import 'viewmodels/family_viewmodel.dart';
 import 'viewmodels/income_viewmodel.dart';
 import 'viewmodels/loan_viewmodel.dart';
 import 'viewmodels/insights_viewmodel.dart';
-import 'views/dashboard/dashboard_screen.dart';
 import 'themes/app_theme.dart';
 import 'constants/app_constants.dart';
 import 'services/navigation_service.dart';

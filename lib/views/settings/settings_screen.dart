@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../widgets/app_navigation_drawer.dart';
@@ -9,7 +8,7 @@ import 'widgets/settings_section.dart';
 import 'widgets/settings_item.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
+  const SettingsScreen({super.key});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -212,7 +211,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             CircleAvatar(
               radius: 40,
-              backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+              backgroundColor: AppTheme.primaryColor.withAlpha((0.1 * 255).toInt()),
               child: const Icon(
                 Icons.person,
                 size: 40,

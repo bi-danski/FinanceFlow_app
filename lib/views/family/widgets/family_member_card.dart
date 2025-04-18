@@ -12,14 +12,14 @@ class FamilyMemberCard extends StatelessWidget {
   final VoidCallback onAddExpense;
 
   const FamilyMemberCard({
-    Key? key,
+    super.key,
     required this.name,
     required this.budget,
     required this.spent,
     this.avatarPath,
     required this.onTap,
     required this.onAddExpense,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +153,7 @@ class FamilyMemberCard extends StatelessWidget {
     
     return CircleAvatar(
       radius: 30,
-      backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+      backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
       child: Text(
         name[0],
         style: TextStyle(

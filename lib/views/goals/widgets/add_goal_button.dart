@@ -5,9 +5,9 @@ class AddGoalButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   const AddGoalButton({
-    Key? key,
+    super.key,
     required this.onPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

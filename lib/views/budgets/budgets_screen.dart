@@ -10,7 +10,7 @@ import 'budget_form_screen.dart';
 import 'widgets/budget_card.dart';
 
 class BudgetsScreen extends StatefulWidget {
-  const BudgetsScreen({Key? key}) : super(key: key);
+  const BudgetsScreen({super.key});
 
   @override
   State<BudgetsScreen> createState() => _BudgetsScreenState();

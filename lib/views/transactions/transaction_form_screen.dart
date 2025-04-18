@@ -6,7 +6,6 @@ import '../../viewmodels/transaction_viewmodel.dart';
 import '../../models/transaction_model.dart';
 import '../../themes/app_theme.dart';
 import '../../constants/app_constants.dart';
-import '../../services/navigation_service.dart';
 
 class TransactionFormScreen extends StatefulWidget {
   final Transaction? transaction; // Null for new transaction, non-null for edit
@@ -76,16 +75,6 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
         _selectedDate = picked;
       });
     }
-  }
-
-  void _toggleTransactionType() {
-    setState(() {
-      _isExpense = !_isExpense;
-      // Reset category when switching transaction type
-      _selectedCategory = _isExpense 
-          ? AppConstants.expenseCategories.first 
-          : AppConstants.incomeCategories.first;
-    });
   }
 
   Future<void> _saveTransaction() async {

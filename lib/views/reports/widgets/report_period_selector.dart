@@ -6,10 +6,10 @@ class ReportPeriodSelector extends StatelessWidget {
   final Function(String) onPeriodChanged;
 
   const ReportPeriodSelector({
-    Key? key,
+    super.key,
     required this.selectedPeriod,
     required this.onPeriodChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +59,7 @@ class ReportPeriodSelector extends StatelessWidget {
           }
         },
         backgroundColor: Colors.grey.shade200,
-        selectedColor: AppTheme.primaryColor.withOpacity(0.2),
+        selectedColor: AppTheme.primaryColor.withValues(alpha: 0.2),
         labelStyle: TextStyle(
           color: isSelected ? AppTheme.primaryColor : Colors.black,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,

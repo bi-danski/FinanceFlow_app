@@ -11,9 +11,9 @@ class LoanFormScreen extends StatefulWidget {
   final Loan? loan; // Null for new loan, non-null for edit
 
   const LoanFormScreen({
-    Key? key,
+    super.key,
     this.loan,
-  }) : super(key: key);
+  });
 
   @override
   State<LoanFormScreen> createState() => _LoanFormScreenState();

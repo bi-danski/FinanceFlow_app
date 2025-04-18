@@ -3,7 +3,6 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import '../constants/app_constants.dart';
 import '../themes/app_theme.dart';
-import '../services/navigation_service.dart';
 import '../viewmodels/insights_viewmodel.dart';
 
 class AppNavigationDrawer extends StatelessWidget {
@@ -11,10 +10,10 @@ class AppNavigationDrawer extends StatelessWidget {
   final Function(int) onItemSelected;
 
   const AppNavigationDrawer({
-    Key? key,
+    super.key,
     required this.selectedIndex,
     required this.onItemSelected,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

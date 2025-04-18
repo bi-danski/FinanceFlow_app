@@ -179,7 +179,7 @@ class BudgetCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: _getCategoryColor().withOpacity(0.1),
+        color: _getCategoryColor().withAlpha((0.1 * 255).toInt()),
         shape: BoxShape.circle,
       ),
       child: Icon(
