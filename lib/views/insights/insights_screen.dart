@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
-import '../../viewmodels/insights_viewmodel.dart';
+// Import local files
 import '../../models/insight_model.dart';
-import '../../widgets/app_navigation_drawer.dart';
+import '../../viewmodels/insights_viewmodel.dart';
 import '../../themes/app_theme.dart';
-import '../../constants/app_constants.dart';
+import '../../widgets/app_navigation_drawer.dart';
 
 class InsightsScreen extends StatefulWidget {
   const InsightsScreen({super.key});
@@ -20,14 +21,24 @@ class _InsightsScreenState extends State<InsightsScreen> with SingleTickerProvid
   int _selectedIndex = 9; // AI Insights tab selected
   late TabController _tabController;
   bool _isGeneratingInsights = false;
-  
+  final List<String> _tabLabels = ['All', 'Spending', 'Saving', 'Investing'];
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
-    _loadInsights();
+    _tabController = TabController(length: _tabLabels.length, vsync: this);
+    _tabController.addListener(() {
+      setState(() {
+        // No need to update _selectedIndex here as it's for drawer navigation
+      });
+    });
+    
+    // Load insights when the screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadInsights();
+    });
   }
-  
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -35,33 +46,70 @@ class _InsightsScreenState extends State<InsightsScreen> with SingleTickerProvid
   }
 
   Future<void> _loadInsights() async {
-    final insightsViewModel = Provider.of<InsightsViewModel>(context, listen: false);
-    await insightsViewModel.loadInsights();
+    if (!mounted) return;
+    
+    // Safely capture context before async gap
+    final viewModel = Provider.of<InsightsViewModel>(context, listen: false);
+    
+    try {
+      await viewModel.loadInsights();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load insights: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            elevation: 6,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+            ),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _generateNewInsights() async {
+    // Safely capture context before async gap
+    final ScaffoldMessengerState? messenger = mounted ? ScaffoldMessenger.of(context) : null;
+    final InsightsViewModel viewModel = Provider.of<InsightsViewModel>(context, listen: false);
+    
+    // Set loading state if still mounted
+    if (!mounted) return;
     setState(() {
       _isGeneratingInsights = true;
     });
     
     try {
-      final insightsViewModel = Provider.of<InsightsViewModel>(context, listen: false);
-      await insightsViewModel.generateInsights();
+      // Perform async operation
+      await viewModel.generateInsights();
       
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+      // Check if we're still mounted after async gap
+      if (mounted && messenger != null) {
+        messenger.showSnackBar(
           const SnackBar(
             content: Text('New insights generated'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppTheme.successColor,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.all(16),
+            elevation: 6,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
           ),
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+      // Check if we're still mounted after async gap
+      if (mounted && messenger != null) {
+        messenger.showSnackBar(
           SnackBar(
             content: Text('Failed to generate insights: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppTheme.errorColor,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            elevation: 6,
+            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
           ),
         );
       }
@@ -74,550 +122,14 @@ class _InsightsScreenState extends State<InsightsScreen> with SingleTickerProvid
     }
   }
 
+  // Helper method to handle navigation item selection
   void _onItemSelected(int index) {
     setState(() {
       _selectedIndex = index;
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final insightsViewModel = Provider.of<InsightsViewModel>(context);
-    
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('AI Insights'),
-        actions: [
-          if (_isGeneratingInsights)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.only(right: 16.0),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              tooltip: 'Generate new insights',
-              onPressed: _generateNewInsights,
-            ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabs: const [
-            Tab(text: 'All Insights'),
-            Tab(text: 'Financial Health'),
-            Tab(text: 'Spending Patterns'),
-            Tab(text: 'Saving Opportunities'),
-          ],
-        ),
-      ),
-      drawer: AppNavigationDrawer(
-        selectedIndex: _selectedIndex,
-        onItemSelected: _onItemSelected,
-      ),
-      body: insightsViewModel.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildInsightsList(insightsViewModel.insights),
-                _buildInsightsList(insightsViewModel.getInsightsByType('Financial Health')),
-                _buildInsightsList(insightsViewModel.getInsightsByType('Spending Pattern')),
-                _buildInsightsList(insightsViewModel.getInsightsByType('Saving Opportunity')),
-              ],
-            ),
-    );
-  }
-
-  Widget _buildInsightsList(List<Insight> insights) {
-    if (insights.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              FontAwesomeIcons.lightbulb,
-              size: 64,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'No insights available',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Tap the refresh button to generate new insights',
-              style: TextStyle(
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _generateNewInsights,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Generate Insights'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(8.0),
-      itemCount: insights.length,
-      itemBuilder: (context, index) {
-        final insight = insights[index];
-        return _buildInsightCard(insight);
-      },
-    );
-  }
-
-  Widget _buildInsightCard(Insight insight) {
-    final iconData = _getInsightIcon(insight.type);
-    final iconColor = _getInsightColor(insight.type);
-    
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: insight.isRead
-            ? BorderSide.none
-            : const BorderSide(color: AppTheme.primaryColor, width: 2),
-      ),
-      child: InkWell(
-        onTap: () => _showInsightDetails(insight),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: iconColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      iconData,
-                      color: iconColor,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          insight.title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          insight.type,
-                          style: TextStyle(
-                            color: iconColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    DateFormat('MMM d').format(insight.date),
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                insight.description,
-                style: const TextStyle(fontSize: 14),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (!insight.isRead)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text(
-                      'NEW',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showInsightDetails(Insight insight) async {
-    // Mark as read
-    if (!insight.isRead) {
-      final insightsViewModel = Provider.of<InsightsViewModel>(context, listen: false);
-      await insightsViewModel.markInsightAsRead(insight.id!);
-    }
-    
-    // Show detail dialog
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (context) => _buildInsightDetailDialog(insight),
-      );
-    }
-  }
-
-  Widget _buildInsightDetailDialog(Insight insight) {
-    final iconData = _getInsightIcon(insight.type);
-    final iconColor = _getInsightColor(insight.type);
-    
-    Widget content;
-    
-    // Create specialized content based on insight type
-    switch (insight.type) {
-      case 'Spending Pattern':
-        if (insight.data != null) {
-          final spendingInsight = SpendingPatternInsight.fromInsight(insight);
-          content = _buildSpendingPatternContent(spendingInsight);
-        } else {
-          content = Text(insight.description);
-        }
-        break;
-      case 'Budget Alert':
-        if (insight.data != null) {
-          final budgetInsight = BudgetAlertInsight.fromInsight(insight);
-          content = _buildBudgetAlertContent(budgetInsight);
-        } else {
-          content = Text(insight.description);
-        }
-        break;
-      case 'Saving Opportunity':
-        if (insight.data != null) {
-          final savingInsight = SavingOpportunityInsight.fromInsight(insight);
-          content = _buildSavingOpportunityContent(savingInsight);
-        } else {
-          content = Text(insight.description);
-        }
-        break;
-      case 'Financial Health':
-        if (insight.data != null) {
-          final healthInsight = FinancialHealthInsight.fromInsight(insight);
-          content = _buildFinancialHealthContent(healthInsight);
-        } else {
-          content = Text(insight.description);
-        }
-        break;
-      default:
-        content = Text(insight.description);
-    }
-    
-    return AlertDialog(
-      title: Row(
-        children: [
-          Icon(iconData, color: iconColor),
-          const SizedBox(width: 8),
-          Expanded(child: Text(insight.title)),
-        ],
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                insight.type,
-                style: TextStyle(
-                  color: iconColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            content,
-            const SizedBox(height: 16),
-            Text(
-              'Generated on ${DateFormat('MMMM d, yyyy').format(insight.date)}',
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            final insightsViewModel = Provider.of<InsightsViewModel>(context, listen: false);
-            insightsViewModel.dismissInsight(insight.id!);
-            Navigator.pop(context);
-          },
-          child: const Text('Dismiss'),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Got it'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSpendingPatternContent(SpendingPatternInsight insight) {
-    final currencyFormat = NumberFormat.currency(symbol: '\$');
-    final isIncrease = insight.percentageChange > 0;
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(insight.description),
-        const SizedBox(height: 16),
-        _buildInfoRow(
-          'Previous ${insight.timeFrame}',
-          currencyFormat.format(insight.previousAmount),
-        ),
-        const SizedBox(height: 8),
-        _buildInfoRow(
-          'Current ${insight.timeFrame}',
-          currencyFormat.format(insight.currentAmount),
-        ),
-        const SizedBox(height: 8),
-        _buildInfoRow(
-          'Change',
-          '${isIncrease ? '+' : ''}${insight.percentageChange.toStringAsFixed(1)}%',
-          valueColor: isIncrease ? Colors.red : Colors.green,
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          'What this means:',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          isIncrease
-              ? 'Your spending in this category has increased. Consider reviewing your habits to identify potential savings.'
-              : 'Your spending in this category has decreased. Great job managing your expenses!',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBudgetAlertContent(BudgetAlertInsight insight) {
-    final currencyFormat = NumberFormat.currency(symbol: '\$');
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(insight.description),
-        const SizedBox(height: 16),
-        _buildInfoRow(
-          'Budget Amount',
-          currencyFormat.format(insight.budgetAmount),
-        ),
-        const SizedBox(height: 8),
-        _buildInfoRow(
-          'Spent Amount',
-          currencyFormat.format(insight.spentAmount),
-        ),
-        const SizedBox(height: 8),
-        _buildInfoRow(
-          'Percentage Used',
-          '${insight.percentageUsed.toStringAsFixed(1)}%',
-          valueColor: insight.percentageUsed > 90 ? Colors.red : Colors.orange,
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          'Recommendation:',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          insight.percentageUsed > 90
-              ? 'Consider adjusting your spending in this category for the remainder of the month to avoid exceeding your budget.'
-              : 'Monitor your spending in this category closely for the rest of the month.',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSavingOpportunityContent(SavingOpportunityInsight insight) {
-    final currencyFormat = NumberFormat.currency(symbol: '\$');
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(insight.description),
-        const SizedBox(height: 16),
-        _buildInfoRow(
-          'Category',
-          insight.category,
-        ),
-        const SizedBox(height: 8),
-        _buildInfoRow(
-          'Potential Monthly Savings',
-          currencyFormat.format(insight.potentialSavings),
-          valueColor: Colors.green,
-        ),
-        const SizedBox(height: 8),
-        _buildInfoRow(
-          'Annual Savings Potential',
-          currencyFormat.format(insight.potentialSavings * 12),
-          valueColor: Colors.green,
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          'Suggestion:',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        Text(insight.suggestion),
-      ],
-    );
-  }
-
-  Widget _buildFinancialHealthContent(FinancialHealthInsight insight) {
-    Color healthColor;
-    switch (insight.overallHealth) {
-      case 'good':
-        healthColor = Colors.green;
-        break;
-      case 'moderate':
-        healthColor = Colors.orange;
-        break;
-      default:
-        healthColor = Colors.red;
-    }
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(insight.description),
-        const SizedBox(height: 16),
-        _buildInfoRow(
-          'Savings Rate',
-          '${(insight.savingsRate * 100).toStringAsFixed(1)}%',
-          valueColor: insight.savingsRate >= AppConstants.goodSavingsRateThreshold
-              ? Colors.green
-              : insight.savingsRate >= AppConstants.moderateSavingsRateThreshold
-                  ? Colors.orange
-                  : Colors.red,
-        ),
-        const SizedBox(height: 8),
-        _buildInfoRow(
-          'Debt-to-Income Ratio',
-          '${(insight.debtToIncomeRatio * 100).toStringAsFixed(1)}%',
-          valueColor: insight.debtToIncomeRatio <= AppConstants.goodDebtToIncomeRatio
-              ? Colors.green
-              : insight.debtToIncomeRatio <= AppConstants.moderateDebtToIncomeRatio
-                  ? Colors.orange
-                  : Colors.red,
-        ),
-        const SizedBox(height: 8),
-        _buildInfoRow(
-          'Emergency Fund',
-          '${insight.emergencyFundMonths.toStringAsFixed(1)} months',
-          valueColor: insight.emergencyFundMonths >= AppConstants.goodEmergencyFundMonths
-              ? Colors.green
-              : insight.emergencyFundMonths >= AppConstants.moderateEmergencyFundMonths
-                  ? Colors.orange
-                  : Colors.red,
-        ),
-        const SizedBox(height: 8),
-        _buildInfoRow(
-          'Overall Health',
-          insight.overallHealth.substring(0, 1).toUpperCase() + insight.overallHealth.substring(1),
-          valueColor: healthColor,
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          'Recommendations:',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        ...insight.recommendations.map((recommendation) => Padding(
-          padding: const EdgeInsets.only(bottom: 8.0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('• '),
-              Expanded(child: Text(recommendation)),
-            ],
-          ),
-        )),
-      ],
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value, {Color? valueColor}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.grey.shade700,
-          ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: valueColor,
-          ),
-        ),
-      ],
-    );
-  }
-
+  // Get appropriate icon for each insight type
   IconData _getInsightIcon(String type) {
     switch (type) {
       case 'Spending Pattern':
@@ -636,11 +148,26 @@ class _InsightsScreenState extends State<InsightsScreen> with SingleTickerProvid
         return FontAwesomeIcons.bullseye;
       case 'Expense Anomaly':
         return FontAwesomeIcons.magnifyingGlassDollar;
+      case 'Savings':
+        return FontAwesomeIcons.piggyBank;
+      case 'Spending Alert':
+        return FontAwesomeIcons.triangleExclamation;
+      case 'Budget':
+        return FontAwesomeIcons.chartPie;
+      case 'Investment':
+        return FontAwesomeIcons.chartLine;
+      case 'Income':
+        return FontAwesomeIcons.moneyBillTrendUp;
+      case 'Tax':
+        return FontAwesomeIcons.fileInvoiceDollar;
+      case 'Goal':
+        return FontAwesomeIcons.bullseye;
       default:
         return FontAwesomeIcons.lightbulb;
     }
   }
 
+  // Get appropriate color for each insight type
   Color _getInsightColor(String type) {
     switch (type) {
       case 'Spending Pattern':
@@ -659,8 +186,452 @@ class _InsightsScreenState extends State<InsightsScreen> with SingleTickerProvid
         return Colors.amber;
       case 'Expense Anomaly':
         return Colors.deepOrange;
+      case 'Savings':
+        return Colors.green.shade700;
+      case 'Spending Alert':
+        return Colors.red.shade700;
+      case 'Budget':
+        return Colors.blue.shade700;
+      case 'Investment':
+        return Colors.purple.shade700;
+      case 'Income':
+        return Colors.teal.shade700;
+      case 'Tax':
+        return Colors.amber.shade800;
+      case 'Goal':
+        return Colors.indigo.shade700;
       default:
         return AppTheme.primaryColor;
     }
+  }
+
+  // Show insight details in a dialog
+  Future<void> _showInsightDetails(Insight insight) async {
+    // Cache context reference to avoid unsafe BuildContext usage 
+    final currentContext = context;
+    if (!mounted) return;
+    
+    final Color iconColor = _getInsightColor(insight.type);
+    final IconData iconData = _getInsightIcon(insight.type);
+    
+    await showDialog(
+      context: currentContext,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        contentPadding: EdgeInsets.zero,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header with icon
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.1),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: iconColor.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(iconData, color: iconColor),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          insight.type,
+                          style: TextStyle(
+                            color: iconColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          insight.title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Description
+                  Text(
+                    insight.description,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Recommendation section - using data from insight if available
+                  if (insight.data != null && insight.data!['recommendation'] != null)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Recommendation:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            insight.data!['recommendation'] as String,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 24),
+                  
+                  // Date at the bottom
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        size: 14,
+                        color: Theme.of(dialogContext).colorScheme.secondary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        DateFormat.yMMMd().format(insight.date),
+                        style: Theme.of(dialogContext).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(dialogContext).colorScheme.secondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              // Action to implement the recommendation
+              Navigator.of(dialogContext).pop();
+              ScaffoldMessenger.of(currentContext).showSnackBar(
+                const SnackBar(
+                  content: Text('Recommendation applied'),
+                  behavior: SnackBarBehavior.floating,
+                  margin: EdgeInsets.all(16),
+                ),
+              );
+            },
+            icon: const Icon(Icons.check),
+            label: const Text('Apply'),
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Modern insight card with animations and gradient background
+  Widget _buildInsightCard(Insight insight) {
+    return Card(
+      elevation: 4,
+      margin: const EdgeInsets.only(bottom: 16.0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+      child: InkWell(
+        onTap: () => _showInsightDetails(insight),
+        borderRadius: BorderRadius.circular(16.0),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16.0),
+            gradient: LinearGradient(
+              colors: [
+                Colors.white,
+                _getInsightColor(insight.type).withValues(alpha: 0.15), // Subtle background gradient
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: _getInsightColor(insight.type).withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        _getInsightIcon(insight.type),
+                        color: _getInsightColor(insight.type),
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Text(
+                        insight.title,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  insight.description,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        height: 1.5, // Increase line height for better readability
+                      ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today_outlined,
+                          size: 14,
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          DateFormat.yMMMd().format(insight.date),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.secondary,
+                              ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'View Details',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward_ios,
+                            size: 12,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    )
+        .animate()
+        .fadeIn(duration: const Duration(milliseconds: 500))
+        .slideY(begin: 0.1, end: 0, duration: const Duration(milliseconds: 400));
+  }
+
+  // Helper function to build insights list
+  Widget _buildInsightsList(List<Insight> insights) {
+    if (insights.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.lightbulb_outline,
+              size: 80,
+              color: Colors.grey,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No insights available yet',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Generate new insights to get started',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _generateNewInsights,
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('Generate Insights'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: insights.length,
+      itemBuilder: (context, index) {
+        final insight = insights[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: _buildInsightCard(insight),
+        );
+      },
+    );
+  }
+
+  // Filter insights based on tab selection
+  List<Insight> _getFilteredInsights(List<Insight> allInsights, int tabIndex) {
+    if (tabIndex == 0) return allInsights; // All insights
+    
+    // Filter based on tab index
+    switch (tabIndex) {
+      case 1: // Spending
+        return allInsights.where((insight) => 
+          insight.type.contains('Spending') || 
+          insight.type.contains('Budget') || 
+          insight.type.contains('Expense')
+        ).toList();
+      case 2: // Saving
+        return allInsights.where((insight) => 
+          insight.type.contains('Saving') || 
+          insight.type.contains('Savings')
+        ).toList();
+      case 3: // Investing
+        return allInsights.where((insight) => 
+          insight.type.contains('Investment') || 
+          insight.type.contains('Goal')
+        ).toList();
+      default:
+        return allInsights;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Financial Insights'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Generate New Insights',
+            onPressed: _isGeneratingInsights 
+              ? null 
+              : _generateNewInsights,
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: _tabLabels.map((label) => Tab(text: label)).toList(),
+          indicatorColor: Theme.of(context).colorScheme.primary,
+          labelColor: Theme.of(context).colorScheme.primary,
+          unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+        ),
+      ),
+      drawer: AppNavigationDrawer(
+        selectedIndex: _selectedIndex,
+        onItemSelected: _onItemSelected,
+      ),
+      body: Consumer<InsightsViewModel>(
+        builder: (context, viewModel, child) {
+          if (viewModel.isLoading) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading insights...'),
+                ],
+              ),
+            );
+          }
+          
+          return TabBarView(
+            controller: _tabController,
+            children: List.generate(_tabLabels.length, (index) {
+              return _buildInsightsList(_getFilteredInsights(viewModel.insights, index));
+            }),
+          );
+        },
+      ),
+      floatingActionButton: _isGeneratingInsights
+          ? FloatingActionButton(
+              onPressed: null,
+              backgroundColor: AppTheme.primaryColor,
+              child: const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            )
+          : FloatingActionButton(
+              onPressed: _generateNewInsights,
+              tooltip: 'Generate New Insights',
+              backgroundColor: AppTheme.primaryColor,
+              child: const Icon(Icons.auto_awesome),
+            ),
+    );
   }
 }
