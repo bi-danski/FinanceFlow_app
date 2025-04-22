@@ -1,0 +1,424 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
+import '../../services/auth_service.dart';
+import '../../themes/app_theme.dart';
+import '../../utils/enhanced_animations.dart';
+import 'sign_up_screen.dart';
+import 'forgot_password_screen.dart';
+
+class SignInScreen extends StatefulWidget {
+  const SignInScreen({super.key});
+
+  @override
+  State<SignInScreen> createState() => _SignInScreenState();
+}
+
+class _SignInScreenState extends State<SignInScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
+  bool _rememberMe = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _signIn() async {
+    if (_formKey.currentState!.validate()) {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      
+      final success = await authService.login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+      
+      if (success && mounted) {
+        // Navigate to dashboard
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      } else if (mounted) {
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authService.error ?? 'Login failed'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authService = Provider.of<AuthService>(context);
+    
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Background gradient
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppTheme.primaryColor.withValues(alpha: 0.8),
+                  AppTheme.secondaryColor.withValues(alpha: 0.9),
+                ],
+              ),
+            ),
+          ),
+          
+          // Background pattern
+          Opacity(
+            opacity: 0.05,
+            child: Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/pattern.png'),
+                  repeat: ImageRepeat.repeat,
+                ),
+              ),
+            ),
+          ),
+          
+          // Content
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Logo and title
+                      _buildHeader(),
+                      
+                      const SizedBox(height: 40),
+                      
+                      // Form
+                      _buildForm(authService),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Sign up link
+                      _buildSignUpLink(),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      children: [
+        // App logo
+        Image.asset(
+          'assets/images/logo.png',
+          height: 80,
+        )
+        .animate()
+        .fadeIn(duration: 600.ms)
+        .slideY(begin: -20, end: 0, curve: Curves.easeOutQuad),
+        
+        const SizedBox(height: 16),
+        
+        // Welcome text
+        Text(
+          'Welcome Back',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        )
+        .animate()
+        .fadeIn(delay: 300.ms, duration: 600.ms),
+        
+        const SizedBox(height: 8),
+        
+        Text(
+          'Sign in to continue to FinanceFlow',
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.white.withValues(alpha: 0.8),
+          ),
+        )
+        .animate()
+        .fadeIn(delay: 500.ms, duration: 600.ms),
+      ],
+    );
+  }
+
+  Widget _buildForm(AuthService authService) {
+    return Form(
+      key: _formKey,
+      child: Card(
+        elevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Email field
+              TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  prefixIcon: Icon(Icons.email_outlined),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your email';
+                  }
+                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                    return 'Please enter a valid email';
+                  }
+                  return null;
+                },
+              )
+              .animate()
+              .fadeIn(delay: 600.ms, duration: 600.ms)
+              .moveX(begin: -20, end: 0),
+              
+              const SizedBox(height: 16),
+              
+              // Password field
+              TextFormField(
+                controller: _passwordController,
+                obscureText: _obscurePassword,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  prefixIcon: Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your password';
+                  }
+                  return null;
+                },
+              )
+              .animate()
+              .fadeIn(delay: 800.ms, duration: 600.ms)
+              .moveX(begin: 20, end: 0),
+              
+              const SizedBox(height: 8),
+              
+              // Remember me and forgot password
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Remember me
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _rememberMe,
+                        onChanged: (value) {
+                          setState(() {
+                            _rememberMe = value ?? false;
+                          });
+                        },
+                      ),
+                      Text('Remember me'),
+                    ],
+                  ),
+                  
+                  // Forgot password
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ForgotPasswordScreen(),
+                        ),
+                      );
+                    },
+                    child: Text('Forgot Password?'),
+                  ),
+                ],
+              )
+              .animate()
+              .fadeIn(delay: 1000.ms, duration: 600.ms),
+              
+              const SizedBox(height: 24),
+              
+              // Sign in button
+              EnhancedAnimations.modernHoverEffect(
+                child: ElevatedButton(
+                  onPressed: authService.isLoading ? null : _signIn,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: authService.isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                          'SIGN IN',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+              )
+              .animate()
+              .fadeIn(delay: 1200.ms, duration: 600.ms)
+              .moveY(begin: 20, end: 0),
+              
+              const SizedBox(height: 24),
+              
+              // Social sign in
+              _buildSocialSignIn(),
+            ],
+          ),
+        ),
+      )
+      .animate()
+      .fadeIn(delay: 400.ms, duration: 800.ms)
+      .scaleXY(begin: 0.9, end: 1.0),
+    );
+  }
+
+  Widget _buildSocialSignIn() {
+    return Column(
+      children: [
+        Text(
+          'Or sign in with',
+          style: TextStyle(color: Colors.grey),
+          textAlign: TextAlign.center,
+        ),
+        
+        const SizedBox(height: 16),
+        
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Google
+            _socialButton(
+              icon: 'assets/icons/google.png',
+              onTap: () {
+                // Implement Google sign in
+              },
+            ),
+            
+            const SizedBox(width: 16),
+            
+            // Apple
+            _socialButton(
+              icon: 'assets/icons/apple.png',
+              onTap: () {
+                // Implement Apple sign in
+              },
+            ),
+            
+            const SizedBox(width: 16),
+            
+            // Facebook
+            _socialButton(
+              icon: 'assets/icons/facebook.png',
+              onTap: () {
+                // Implement Facebook sign in
+              },
+            ),
+          ],
+        ),
+      ],
+    )
+    .animate()
+    .fadeIn(delay: 1400.ms, duration: 600.ms);
+  }
+
+  Widget _socialButton({required String icon, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Image.asset(
+            icon,
+            width: 24,
+            height: 24,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSignUpLink() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          "Don't have an account? ",
+          style: TextStyle(color: Colors.white),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SignUpScreen(),
+              ),
+            );
+          },
+          child: Text(
+            'Sign Up',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    )
+    .animate()
+    .fadeIn(delay: 1600.ms, duration: 600.ms);
+  }
+}
