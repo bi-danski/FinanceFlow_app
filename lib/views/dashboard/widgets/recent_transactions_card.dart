@@ -79,7 +79,7 @@ class RecentTransactionsCard extends StatelessWidget {
       children: [
         _buildTransactionHeader(),
         const Divider(),
-        ..._mockTransactions.map((transaction) => _buildTransactionItem(context, transaction)).toList(),
+        ..._mockTransactions.map((transaction) => _buildTransactionItem(context, transaction)),
       ],
     );
   }

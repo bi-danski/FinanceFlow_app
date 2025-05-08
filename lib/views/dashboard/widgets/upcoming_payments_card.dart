@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../themes/app_theme.dart';
 
 class UpcomingPaymentsCard extends StatelessWidget {
-  UpcomingPaymentsCard({Key? key}) : super(key: key);
+  UpcomingPaymentsCard({super.key});
 
   final List<Map<String, dynamic>> _mockUpcomingPayments = [
     {
@@ -81,7 +81,7 @@ class UpcomingPaymentsCard extends StatelessWidget {
       children: [
         _buildPaymentHeader(),
         const Divider(),
-        ..._mockUpcomingPayments.map((payment) => _buildPaymentItem(payment)).toList(),
+        ..._mockUpcomingPayments.map((payment) => _buildPaymentItem(payment)),
       ],
     );
   }
