@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
-import '../models/transaction_model.dart';
+import '../models/transaction_model.dart' as app_models; // Use alias to match database_service.dart
 import '../models/budget_model.dart';
 import '../models/goal_model.dart';
 import '../models/insight_model.dart';
@@ -92,49 +92,41 @@ class InsightsService {
   }
 
   // Generate spending pattern insights
-  Future<List<Insight>> _generateSpendingPatternInsights(List<Transaction> transactions) async {
+  Future<List<Insight>> _generateSpendingPatternInsights(List<app_models.Transaction> transactions) async {
     List<Insight> insights = [];
     
     if (transactions.isEmpty) return insights;
     
     // Group transactions by category
-    Map<String, List<Transaction>> categorizedTransactions = {};
+    Map<String, List<app_models.Transaction>> categorizedTransactions = {};
     for (var transaction in transactions) {
       if (transaction.amount < 0) { // Only consider expenses
-        if (!categorizedTransactions.containsKey(transaction.category)) {
-          categorizedTransactions[transaction.category] = [];
+        final category = transaction.category ?? 'Uncategorized';
+        if (!categorizedTransactions.containsKey(category)) {
+          categorizedTransactions[category] = [];
         }
-        categorizedTransactions[transaction.category]!.add(transaction);
+        categorizedTransactions[category]!.add(transaction);
       }
     }
     
     // Calculate current month and previous month
-    final now = DateTime.now();
-    final currentMonth = DateTime(now.year, now.month);
-    final previousMonth = DateTime(now.year, now.month - 1);
+    DateTime now = DateTime.now();
+    DateTime currentMonthStart = DateTime(now.year, now.month, 1);
+    DateTime previousMonthStart = DateTime(now.year, now.month - 1, 1);
     
-    // Analyze each category
-    for (var category in categorizedTransactions.keys) {
-      final categoryTransactions = categorizedTransactions[category]!;
+    // Analyze spending patterns for each category
+    categorizedTransactions.forEach((category, categoryTransactions) {
+      // Calculate total spent in current and previous month
+      double currentMonthTotal = categoryTransactions
+          .where((t) => t.date.isAfter(currentMonthStart))
+          .fold(0, (sum, t) => sum + t.amount);
       
-      // Get current month transactions
-      final currentMonthTransactions = categoryTransactions.where((t) => 
-        t.date.year == currentMonth.year && t.date.month == currentMonth.month
-      ).toList();
-      
-      // Get previous month transactions
-      final previousMonthTransactions = categoryTransactions.where((t) => 
-        t.date.year == previousMonth.year && t.date.month == previousMonth.month
-      ).toList();
-      
-      if (currentMonthTransactions.isEmpty || previousMonthTransactions.isEmpty) continue;
-      
-      // Calculate totals
-      final currentTotal = currentMonthTransactions.fold(0.0, (sum, t) => sum + t.amount.abs());
-      final previousTotal = previousMonthTransactions.fold(0.0, (sum, t) => sum + t.amount.abs());
+      double previousMonthTotal = categoryTransactions
+          .where((t) => t.date.isAfter(previousMonthStart) && t.date.isBefore(currentMonthStart))
+          .fold(0, (sum, t) => sum + t.amount);
       
       // Calculate percentage change
-      final percentageChange = ((currentTotal - previousTotal) / previousTotal) * 100;
+      double percentageChange = ((currentMonthTotal - previousMonthTotal) / previousMonthTotal) * 100;
       
       // Only create insight if change is significant (more than 20%)
       if (percentageChange.abs() >= 20) {
@@ -144,24 +136,24 @@ class InsightsService {
           date: DateTime.now(),
           category: category,
           percentageChange: percentageChange,
-          previousAmount: previousTotal,
-          currentAmount: currentTotal,
+          previousAmount: previousMonthTotal,
+          currentAmount: currentMonthTotal,
           timeFrame: 'month',
           relevanceScore: min(1.0, percentageChange.abs() / 100),
         );
         
         insights.add(insight);
       }
-    }
+    });
     
     return insights;
   }
 
   // Generate budget alerts
-  Future<List<Insight>> _generateBudgetAlerts(List<Transaction> transactions, List<Budget> budgets) async {
+  Future<List<Insight>> _generateBudgetAlerts(List<app_models.Transaction> transactions, List<Budget> budgets) async {
     List<Insight> insights = [];
     
-    if (transactions.isEmpty || budgets.isEmpty) return insights;
+    if (budgets.isEmpty) return insights;
     
     final now = DateTime.now();
     final currentMonth = DateTime(now.year, now.month);
@@ -219,19 +211,22 @@ class InsightsService {
   }
 
   // Generate saving opportunities
-  Future<List<Insight>> _generateSavingOpportunities(List<Transaction> transactions) async {
+  Future<List<Insight>> _generateSavingOpportunities(List<app_models.Transaction> transactions) async {
     List<Insight> insights = [];
     
     if (transactions.isEmpty) return insights;
     
+    // Group transactions by month if needed for future implementations
+    
     // Group transactions by category
-    Map<String, List<Transaction>> categorizedTransactions = {};
+    Map<String, List<app_models.Transaction>> categorizedTransactions = {};
     for (var transaction in transactions) {
       if (transaction.amount < 0) { // Only consider expenses
-        if (!categorizedTransactions.containsKey(transaction.category)) {
-          categorizedTransactions[transaction.category] = [];
+        final category = transaction.category ?? 'Uncategorized';
+        if (!categorizedTransactions.containsKey(category)) {
+          categorizedTransactions[category] = [];
         }
-        categorizedTransactions[transaction.category]!.add(transaction);
+        categorizedTransactions[category]!.add(transaction);
       }
     }
     
@@ -302,7 +297,7 @@ class InsightsService {
 
   // Generate financial health insights
   Future<List<Insight>> _generateFinancialHealthInsights(
-    List<Transaction> transactions,
+    List<app_models.Transaction> transactions,
     List<Budget> budgets,
     List<Goal> goals,
     List<IncomeSource> incomeSources,
@@ -391,7 +386,7 @@ class InsightsService {
   }
 
   // Helper method to calculate months span in a list of transactions
-  int _calculateMonthsSpan(List<Transaction> transactions) {
+  int _calculateMonthsSpan(List<app_models.Transaction> transactions) {
     if (transactions.isEmpty) return 0;
     
     // Find earliest and latest dates

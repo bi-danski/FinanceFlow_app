@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import '../models/family_member_model.dart';
+import '../models/user_model.dart';
 import '../services/database_service.dart';
 
 class FamilyViewModel extends ChangeNotifier {
@@ -17,7 +18,14 @@ class FamilyViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _familyMembers = await _databaseService.getFamilyMembers();
+      final users = await _databaseService.getFamilyMembers();
+      _familyMembers = users.map((user) => FamilyMember(
+        id: user.id,
+        name: user.name,
+        budget: 0.0, // Default values since User doesn't have these fields
+        spent: 0.0,
+        avatarPath: '',
+      )).toList();
     } catch (e) {
       logger.info('Error loading family members: $e');
     } finally {
@@ -28,7 +36,21 @@ class FamilyViewModel extends ChangeNotifier {
 
   Future<bool> addFamilyMember(FamilyMember member) async {
     try {
-      await _databaseService.insertFamilyMember(member);
+      // Convert FamilyMember to User for database service
+      final user = User(
+        id: member.id ?? 0, // Provide default value if id is null
+        name: member.name,
+        email: '', // Required field for User
+        createdAt: DateTime.now(),
+        lastLogin: DateTime.now(),
+        preferences: {},
+      );
+      
+      // Get current user ID for primary user relationship
+      final currentUserId = await _databaseService.getCurrentUserId();
+      
+      // Use a default value of 1 if currentUserId is null
+      await _databaseService.insertFamilyMember(user, currentUserId ?? 1);
       await loadFamilyMembers();
       return true;
     } catch (e) {
@@ -47,7 +69,17 @@ class FamilyViewModel extends ChangeNotifier {
         avatarPath: member.avatarPath,
       );
       
-      await _databaseService.updateFamilyMember(updatedMember);
+      // Convert FamilyMember to User for database service
+      final user = User(
+        id: updatedMember.id ?? 0, // Provide default value if id is null
+        name: updatedMember.name,
+        email: '', // Required field for User
+        createdAt: DateTime.now(),
+        lastLogin: DateTime.now(),
+        preferences: {},
+      );
+      
+      await _databaseService.updateFamilyMember(user);
       await loadFamilyMembers();
       return true;
     } catch (e) {

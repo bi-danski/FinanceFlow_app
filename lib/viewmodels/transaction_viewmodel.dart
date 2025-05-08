@@ -40,7 +40,7 @@ class TransactionViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _transactions = await _databaseService.getRecentTransactions(limit);
+      _transactions = await _databaseService.getRecentTransactions(limit: limit);
     } catch (e) {
       logger.info('Error loading recent transactions: $e');
     } finally {
@@ -54,7 +54,7 @@ class TransactionViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _transactions = await _databaseService.getTransactionsByMonth(month);
+      _transactions = await _databaseService.getTransactionsByMonth(month.year, month.month);
     } catch (e) {
       logger.info('Error loading transactions by month: $e');
     } finally {
@@ -128,12 +128,8 @@ class TransactionViewModel extends ChangeNotifier {
 
   Future<bool> processMonthlyCarryForward() async {
     try {
-      // Get the current month and the next month
-      final currentMonth = DateTime(_selectedMonth.year, _selectedMonth.month);
-      final nextMonth = DateTime(_selectedMonth.year, _selectedMonth.month + 1);
-      
       // Process the carry forward
-      await _databaseService.processMonthlyCarryForward(currentMonth, nextMonth);
+      await _databaseService.processMonthlyCarryForward();
       
       // Reload transactions for the current month
       await loadTransactionsByMonth(_selectedMonth);
