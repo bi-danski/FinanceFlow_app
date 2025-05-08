@@ -66,22 +66,21 @@ class _SignInScreenState extends State<SignInScreen> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppTheme.primaryColor.withValues(alpha: 0.8),
-                  AppTheme.secondaryColor.withValues(alpha: 0.9),
+                  AppTheme.primaryColor.withOpacity(0.8),
+                  AppTheme.secondaryColor.withOpacity(0.9),
                 ],
               ),
             ),
           ),
           
-          // Background pattern
+          // Background pattern - removed problematic image
+          // Using a simple container with a subtle pattern effect
           Opacity(
             opacity: 0.05,
             child: Container(
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('assets/images/pattern.png'),
-                  repeat: ImageRepeat.repeat,
-                ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                backgroundBlendMode: BlendMode.lighten,
               ),
             ),
           ),
@@ -122,10 +121,11 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget _buildHeader() {
     return Column(
       children: [
-        // App logo
-        Image.asset(
-          'assets/images/logo.png',
-          height: 80,
+        // App logo - using icon instead of image asset
+        Icon(
+          Icons.account_balance_wallet,
+          size: 80,
+          color: Colors.white,
         )
         .animate()
         .fadeIn(duration: 600.ms)
@@ -151,7 +151,7 @@ class _SignInScreenState extends State<SignInScreen> {
           'Sign in to continue to FinanceFlow',
           style: TextStyle(
             fontSize: 16,
-            color: Colors.white.withValues(alpha: 0.8),
+            color: Colors.white.withOpacity(0.8),
           ),
         )
         .animate()
@@ -363,6 +363,16 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Widget _socialButton({required String icon, required VoidCallback onTap}) {
+    // Map icon strings to Flutter icons
+    IconData iconData = Icons.public;  // Default icon
+    if (icon.contains('google')) {
+      iconData = Icons.search;  // Representing Google
+    } else if (icon.contains('apple')) {
+      iconData = Icons.apple;  // Apple icon
+    } else if (icon.contains('facebook')) {
+      iconData = Icons.facebook;  // Facebook icon
+    }
+    
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -374,17 +384,17 @@ class _SignInScreenState extends State<SignInScreen> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
+              color: Colors.black.withOpacity(0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Center(
-          child: Image.asset(
-            icon,
-            width: 24,
-            height: 24,
+          child: Icon(
+            iconData,
+            size: 24,
+            color: Colors.black87,
           ),
         ),
       ),
