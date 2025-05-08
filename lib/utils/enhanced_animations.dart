@@ -35,6 +35,66 @@ class EnhancedAnimations {
       );
   }
   
+  /// Apply a shimmer loading effect to a widget
+  static Widget shimmerLoading(Widget child, {int? index}) {
+    final delay = index != null ? Duration(milliseconds: 50 * index) : Duration.zero;
+    
+    // Create a repeating shimmer effect
+    return child
+      .animate(delay: delay)
+      .shimmer(duration: const Duration(milliseconds: 1200), color: Colors.white.withAlpha(127))
+      .then(delay: const Duration(milliseconds: 600))
+      .shimmer(duration: const Duration(milliseconds: 1200), color: Colors.white.withAlpha(127));
+  }
+  
+  /// Create an animated icon with scale and shake effects
+  static Widget animatedIcon(IconData icon, {double size = 24, Color? color}) {
+    return Icon(
+      icon,
+      size: size,
+      color: color,
+    )
+    .animate()
+    .scale(duration: const Duration(milliseconds: 600), curve: Curves.easeOutBack)
+    .then(delay: const Duration(milliseconds: 200))
+    .shake(hz: 2, rotation: 0.02);
+  }
+  
+  /// Create a text widget that fades in with a delay
+  static Widget fadeInText(String text, {
+    TextStyle? style, 
+    TextAlign? textAlign,
+    int delayMillis = 0,
+  }) {
+    return Text(
+      text,
+      style: style,
+      textAlign: textAlign,
+    )
+    .animate()
+    .fadeIn(
+      delay: Duration(milliseconds: delayMillis), 
+      duration: const Duration(milliseconds: 600)
+    );
+  }
+  
+  /// Create an animated button with fade in and slide effects
+  static Widget animatedButton(Widget button, {int delayMillis = 0}) {
+    return button
+      .animate()
+      .fadeIn(
+        delay: Duration(milliseconds: delayMillis), 
+        duration: const Duration(milliseconds: 600)
+      )
+      .slideY(
+        begin: 0.3, 
+        end: 0, 
+        delay: Duration(milliseconds: delayMillis),
+        duration: const Duration(milliseconds: 600), 
+        curve: Curves.easeOutBack
+      );
+  }
+  
   /// Apply a scale effect on tap with haptic feedback
   static Widget scaleOnTap({
     required Widget child,

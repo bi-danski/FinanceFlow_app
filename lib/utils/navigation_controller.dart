@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../utils/page_transitions.dart';
 import '../utils/flip_page_transition.dart' as flip;
 import '../utils/bouncy_page_transition.dart';
+import '../utils/smooth_slide_transition.dart';
 
 /// A controller class to handle app navigation with enhanced transitions
 class NavigationController {
@@ -62,6 +63,20 @@ class NavigationController {
       ),
     );
   }
+  
+  /// Navigate with a smooth slide transition
+  static Future<T?> navigateWithSmoothSlide<T>(
+    BuildContext context, 
+    Widget page, {
+    SlideDirection direction = SlideDirection.rightToLeft,
+  }) {
+    return Navigator.of(context).push<T>(
+      SmoothSlideTransition<T>(
+        page: page,
+        direction: direction,
+      ),
+    );
+  }
 
   /// Create a named route with transition based on route settings
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -89,9 +104,9 @@ class NavigationController {
           page: const AccountsScreenPlaceholder(),
         );
       case '/transactions':
-        return flip.FlipPageTransition<dynamic>(
+        return SmoothSlideTransition<dynamic>(
           page: const TransactionsScreenPlaceholder(),
-          direction: flip.FlipDirection.horizontal,
+          direction: SlideDirection.rightToLeft,
         );
       default:
         // Default transition for unknown routes

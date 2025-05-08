@@ -66,8 +66,8 @@ class _SignInScreenState extends State<SignInScreen> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppTheme.primaryColor.withOpacity(0.8),
-                  AppTheme.secondaryColor.withOpacity(0.9),
+                  AppTheme.primaryColor.withAlpha(204), // 0.8 * 255 = 204
+                  AppTheme.secondaryColor.withAlpha(230), // 0.9 * 255 = 230
                 ],
               ),
             ),
@@ -151,7 +151,7 @@ class _SignInScreenState extends State<SignInScreen> {
           'Sign in to continue to FinanceFlow',
           style: TextStyle(
             fontSize: 16,
-            color: Colors.white.withOpacity(0.8),
+            color: Colors.white.withAlpha(204), // 0.8 * 255 = 204
           ),
         )
         .animate()
@@ -384,7 +384,7 @@ class _SignInScreenState extends State<SignInScreen> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withAlpha(26), // 0.1 * 255 = 25.5 ≈ 26
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
