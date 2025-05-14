@@ -16,7 +16,7 @@ class FlipPageTransition<T> extends PageRouteBuilder<T> {
     required this.page,
     this.direction = FlipDirection.horizontal,
     String? routeName,
-    bool fullscreenDialog = false,
+    super.fullscreenDialog,
   }) : super(
           settings: routeName != null ? RouteSettings(name: routeName) : null,
           pageBuilder: (context, animation, secondaryAnimation) => page,
@@ -66,6 +66,5 @@ class FlipPageTransition<T> extends PageRouteBuilder<T> {
             );
           },
           transitionDuration: const Duration(milliseconds: 800),
-          fullscreenDialog: fullscreenDialog,
         );
 }

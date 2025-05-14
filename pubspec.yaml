@@ -45,6 +45,8 @@ dependencies:
   sqflite_common_ffi_web: ^0.4.2
   path: ^1.8.3
   logging: ^1.2.0
+
+  # Firebase dependencies removed from main dependencies and moved to dev_dependencies
   
   # Charts and graphs
   fl_chart: ^0.66.1

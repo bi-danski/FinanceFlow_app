@@ -101,7 +101,7 @@ class _AnimatedPrimaryButtonState extends State<AnimatedPrimaryButton> with Sing
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  _isPressed ? buttonColor.withOpacity(0.9) : buttonColor,
+                  _isPressed ? buttonColor.withValues(alpha: 0.9) : buttonColor,
                   Color.lerp(buttonColor, Colors.black, _isPressed ? 0.15 : 0.1) ?? buttonColor,
                 ],
               ),

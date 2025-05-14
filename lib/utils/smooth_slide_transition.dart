@@ -21,7 +21,7 @@ class SmoothSlideTransition<T> extends PageRouteBuilder<T> {
     this.direction = SlideDirection.rightToLeft,
     this.curve = Curves.easeOutQuint,
     String? routeName,
-    bool fullscreenDialog = false,
+    super.fullscreenDialog,
   }) : super(
           settings: routeName != null ? RouteSettings(name: routeName) : null,
           pageBuilder: (context, animation, secondaryAnimation) => page,
@@ -100,6 +100,5 @@ class SmoothSlideTransition<T> extends PageRouteBuilder<T> {
             );
           },
           transitionDuration: EnhancedAnimations.standardDuration,
-          fullscreenDialog: fullscreenDialog,
         );
 }

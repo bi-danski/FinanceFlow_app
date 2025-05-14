@@ -138,12 +138,12 @@ class SpringCurve extends Curve {
     
     if (beta < 1.0) {
       // Underdamped spring (bouncy)
-      final omega_d = omega * math.sqrt(1.0 - beta * beta);
+      final omegaD = omega * math.sqrt(1.0 - beta * beta);
       final A = 1.0;
-      final B = (beta * omega + velocity) / omega_d;
+      final B = (beta * omega + velocity) / omegaD;
       
       return 1.0 - math.exp(-beta * omega * t) * 
-             (A * math.cos(omega_d * t) + B * math.sin(omega_d * t));
+             (A * math.cos(omegaD * t) + B * math.sin(omegaD * t));
     } else {
       // Critically damped or overdamped (no bounce)
       return 1.0 - (1.0 + t) * math.exp(-t);
