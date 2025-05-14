@@ -23,6 +23,12 @@ import '../../widgets/dashboard/upcoming_payments_widget.dart';
 import '../../widgets/dashboard/smart_insights_card.dart';
 import '../../widgets/dashboard/budget_status_summary.dart';
 import '../../widgets/dashboard/financial_health_score.dart';
+import '../../widgets/dashboard/consolidated_financial_overview.dart';
+import '../../widgets/dashboard/interactive_cash_flow_timeline.dart';
+import '../../widgets/dashboard/money_distribution_visualization.dart';
+import '../../widgets/dashboard/recurring_transactions_summary.dart';
+import '../../widgets/dashboard/financial_goal_tracker.dart';
+import '../../widgets/dashboard/unified_financial_management_panel.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -425,6 +431,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<Widget> _buildEnhancedDashboardWidgets() {
     // Collection of custom UI components to display
     final customWidgets = <Widget>[
+      // Consolidated Financial Overview - NEW COMPONENT
+      ConsolidatedFinancialOverview(
+        balance: 12450.75,
+        income: 5800.00,
+        expenses: 3250.25,
+        onViewDetails: () {
+          HapticFeedback.selectionClick();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('View financial details')),
+          );
+        },
+        onPeriodChanged: (period) {
+          HapticFeedback.lightImpact();
+          // Period change logic would go here
+        },
+      ),
+
+      const SizedBox(height: 16),
+
       // Quick Actions Panel with common financial tasks
       QuickActionsPanel(
         onPayBills: () {
@@ -495,6 +520,393 @@ class _DashboardScreenState extends State<DashboardScreen> {
           // Handle payment action
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Payment action for ${payment.name}')),
+          );
+        },
+      ),
+      
+      const SizedBox(height: 16),
+      
+      // Interactive Cash Flow Timeline - NEW COMPONENT
+      InteractiveCashFlowTimeline(
+        events: [
+          CashFlowEvent(
+            id: '1',
+            title: 'Salary',
+            amount: 2800.00,
+            date: DateTime.now().add(const Duration(days: 3)),
+            isIncome: true,
+            category: 'Income',
+          ),
+          CashFlowEvent(
+            id: '2',
+            title: 'Rent',
+            amount: 1200.00,
+            date: DateTime.now().add(const Duration(days: 5)),
+            isIncome: false,
+            category: 'Housing',
+          ),
+          CashFlowEvent(
+            id: '3',
+            title: 'Freelance',
+            amount: 750.00,
+            date: DateTime.now().add(const Duration(days: 7)),
+            isIncome: true,
+            category: 'Income',
+          ),
+          CashFlowEvent(
+            id: '4',
+            title: 'Internet',
+            amount: 80.00,
+            date: DateTime.now().add(const Duration(days: 9)),
+            isIncome: false,
+            category: 'Utilities',
+          ),
+        ],
+        startDate: DateTime.now(),
+        onEventTap: (event) {
+          HapticFeedback.selectionClick();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Cash flow event: ${event.title}')),
+          );
+        },
+      ),
+      
+      const SizedBox(height: 16),
+      
+      // Money Distribution Visualization - NEW COMPONENT
+      MoneyDistributionVisualization(
+        title: 'Spending Distribution',
+        subtitle: 'How your money is allocated',
+        categories: [
+          SpendingCategory(
+            id: '1',
+            name: 'Housing',
+            amount: 1450.00,
+            color: Colors.blue.shade700,
+            icon: Icons.home,
+          ),
+          SpendingCategory(
+            id: '2',
+            name: 'Food',
+            amount: 650.00,
+            color: Colors.green.shade700,
+            icon: Icons.restaurant,
+          ),
+          SpendingCategory(
+            id: '3',
+            name: 'Transportation',
+            amount: 320.00,
+            color: Colors.orange.shade700,
+            icon: Icons.directions_car,
+          ),
+          SpendingCategory(
+            id: '4',
+            name: 'Entertainment',
+            amount: 280.00,
+            color: Colors.purple.shade700,
+            icon: Icons.movie,
+          ),
+          SpendingCategory(
+            id: '5',
+            name: 'Others',
+            amount: 450.00,
+            color: Colors.grey.shade700,
+            icon: Icons.more_horiz,
+          ),
+        ],
+        onCategoryTap: (category) {
+          HapticFeedback.selectionClick();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Category tapped: ${category.name}')),
+          );
+        },
+      ),
+      
+      const SizedBox(height: 16),
+      
+      // Recurring Transactions Summary - NEW COMPONENT
+      RecurringTransactionsSummary(
+        transactions: [
+          RecurringTransaction(
+            id: '1',
+            name: 'Netflix',
+            amount: 15.99,
+            category: 'Entertainment',
+            frequency: 'monthly',
+            color: Colors.red.shade700,
+            icon: Icons.movie,
+            nextDueDate: DateTime.now().add(const Duration(days: 8)),
+          ),
+          RecurringTransaction(
+            id: '2',
+            name: 'Gym Membership',
+            amount: 49.99,
+            category: 'Health',
+            frequency: 'monthly',
+            color: Colors.green.shade700,
+            icon: Icons.fitness_center,
+            nextDueDate: DateTime.now().add(const Duration(days: 12)),
+          ),
+          RecurringTransaction(
+            id: '3',
+            name: 'Cloud Storage',
+            amount: 9.99,
+            category: 'Tech',
+            frequency: 'monthly',
+            color: Colors.blue.shade700,
+            icon: Icons.cloud,
+            nextDueDate: DateTime.now().add(const Duration(days: 15)),
+          ),
+          RecurringTransaction(
+            id: '4',
+            name: 'Phone Plan',
+            amount: 65.00,
+            category: 'Utilities',
+            frequency: 'monthly',
+            color: Colors.orange.shade700,
+            icon: Icons.phone_android,
+            nextDueDate: DateTime.now().add(const Duration(days: 3)),
+            isEssential: true,
+          ),
+        ],
+        monthlyIncome: 5800.00,
+        onTransactionTap: (transaction) {
+          HapticFeedback.selectionClick();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Subscription: ${transaction.name}')),
+          );
+        },
+        onViewAll: () {
+          HapticFeedback.selectionClick();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('View all recurring transactions')),
+          );
+        },
+        onOptimize: () {
+          HapticFeedback.mediumImpact();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Optimize recurring expenses')),
+          );
+        },
+      ),
+      
+      const SizedBox(height: 16),
+      
+      // Financial Goal Tracker - NEW COMPONENT
+      FinancialGoalTracker(
+        goals: [
+          FinancialGoal(
+            id: '1',
+            name: 'Emergency Fund',
+            description: '6 months of expenses',
+            targetAmount: 10000.00,
+            currentAmount: 7500.00,
+            monthlyContribution: 500.00,
+            createdDate: DateTime.now().subtract(const Duration(days: 120)),
+            color: Colors.blue.shade700,
+            icon: Icons.shield,
+            priority: 1,
+          ),
+          FinancialGoal(
+            id: '2',
+            name: 'Vacation',
+            description: 'Trip to Bali',
+            targetAmount: 3000.00,
+            currentAmount: 1200.00,
+            monthlyContribution: 300.00,
+            createdDate: DateTime.now().subtract(const Duration(days: 60)),
+            targetDate: DateTime.now().add(const Duration(days: 180)),
+            color: Colors.orange.shade700,
+            icon: Icons.beach_access,
+            priority: 2,
+          ),
+          FinancialGoal(
+            id: '3',
+            name: 'New Laptop',
+            targetAmount: 1500.00,
+            currentAmount: 1500.00,
+            monthlyContribution: 0.00,
+            createdDate: DateTime.now().subtract(const Duration(days: 90)),
+            color: Colors.green.shade700,
+            icon: Icons.laptop_mac,
+            priority: 3,
+          ),
+        ],
+        onGoalTap: (goal) {
+          HapticFeedback.selectionClick();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Goal tapped: ${goal.name}')),
+          );
+        },
+        onAddGoal: () {
+          HapticFeedback.mediumImpact();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Add new financial goal')),
+          );
+        },
+      ),
+      
+      const SizedBox(height: 16),
+      
+      // Unified Financial Management Panel - NEW COMPONENT
+      // Removes redundancy in Income, Budget, and Loan sections
+      UnifiedFinancialManagementPanel(
+        sections: [
+          // Income Section
+          FinancialManagementSection(
+            id: '1',
+            name: 'Income',
+            subtitle: 'Monthly income sources',
+            totalAmount: 5800.00,
+            icon: Icons.account_balance_wallet,
+            color: Colors.green.shade700,
+            emptyStateMessage: 'Add your income sources to track your monthly earnings',
+            items: [
+              FinancialManagementItem(
+                id: '1',
+                name: 'Primary Job',
+                description: 'Software Developer',
+                amount: 4200.00,
+                period: 'Monthly',
+                icon: Icons.work,
+              ),
+              FinancialManagementItem(
+                id: '2',
+                name: 'Freelance',
+                description: 'UI/UX Design',
+                amount: 1200.00,
+                period: 'Monthly',
+                icon: Icons.design_services,
+              ),
+              FinancialManagementItem(
+                id: '3',
+                name: 'Investments',
+                description: 'Dividend Income',
+                amount: 400.00,
+                period: 'Monthly',
+                icon: Icons.trending_up,
+              ),
+            ],
+          ),
+          
+          // Budget Section
+          FinancialManagementSection(
+            id: '2',
+            name: 'Budget',
+            subtitle: 'Monthly spending allocations',
+            totalAmount: 4500.00,
+            icon: Icons.pie_chart,
+            color: Colors.blue.shade700,
+            emptyStateMessage: 'Create budget categories to manage your spending',
+            items: [
+              FinancialManagementItem(
+                id: '1',
+                name: 'Housing',
+                description: 'Rent and utilities',
+                amount: 1800.00,
+                period: 'Monthly',
+                icon: Icons.home,
+              ),
+              FinancialManagementItem(
+                id: '2',
+                name: 'Food',
+                description: 'Groceries and dining',
+                amount: 800.00,
+                period: 'Monthly',
+                icon: Icons.restaurant,
+              ),
+              FinancialManagementItem(
+                id: '3',
+                name: 'Transportation',
+                description: 'Gas and public transit',
+                amount: 350.00,
+                period: 'Monthly',
+                icon: Icons.directions_car,
+              ),
+              FinancialManagementItem(
+                id: '4',
+                name: 'Entertainment',
+                description: 'Movies, games, and fun',
+                amount: 400.00,
+                period: 'Monthly',
+                icon: Icons.movie,
+              ),
+              FinancialManagementItem(
+                id: '5',
+                name: 'Shopping',
+                description: 'Clothing and general',
+                amount: 450.00,
+                period: 'Monthly',
+                icon: Icons.shopping_bag,
+              ),
+              FinancialManagementItem(
+                id: '6',
+                name: 'Savings',
+                description: 'Emergency fund',
+                amount: 700.00,
+                period: 'Monthly',
+                icon: Icons.savings,
+              ),
+            ],
+          ),
+          
+          // Loan Section
+          FinancialManagementSection(
+            id: '3',
+            name: 'Loans',
+            subtitle: 'Active loans and repayments',
+            totalAmount: 1250.00,
+            icon: Icons.account_balance,
+            color: Colors.purple.shade700,
+            emptyStateMessage: 'Track your loans and payment schedules',
+            items: [
+              FinancialManagementItem(
+                id: '1',
+                name: 'Student Loan',
+                description: 'Education loan - 3.5% interest',
+                amount: 450.00,
+                period: 'Monthly',
+                icon: Icons.school,
+              ),
+              FinancialManagementItem(
+                id: '2',
+                name: 'Car Loan',
+                description: 'Auto loan - 4.2% interest',
+                amount: 380.00,
+                period: 'Monthly',
+                icon: Icons.time_to_leave,
+              ),
+              FinancialManagementItem(
+                id: '3',
+                name: 'Personal Loan',
+                description: 'Home renovation - 6.5% interest',
+                amount: 420.00,
+                period: 'Monthly',
+                icon: Icons.home_repair_service,
+              ),
+            ],
+          ),
+        ],
+        onItemTap: (section, item) {
+          HapticFeedback.selectionClick();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${section.name} item: ${item.name}')),
+          );
+        },
+        onAddItem: (section) {
+          // The form dialogs are now handled directly in the UnifiedFinancialManagementPanel
+          // We're just updating the UI after a new item is added
+          HapticFeedback.mediumImpact();
+          
+          // In a real app, you'd refresh data from your data source here
+          setState(() {
+            // This would trigger a UI refresh when real data changes
+          });
+        },
+        onViewAll: (section) {
+          HapticFeedback.selectionClick();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('View all ${section.name.toLowerCase()} items')),
           );
         },
       ),

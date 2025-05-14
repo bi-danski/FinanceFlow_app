@@ -135,14 +135,26 @@ class EnhancedAnimations {
     Duration duration = const Duration(milliseconds: 200),
   }) {
     return _ModernHoverEffect(
-      child: child,
       scale: scale,
       elevation: elevation,
       duration: duration,
+      child: child,
     );
   }
-
   
+  /// Create a widget with fade and slide animation
+  static Widget fadeSlide({
+    required Widget child,
+    Duration duration = const Duration(milliseconds: 300),
+    Offset begin = const Offset(0, 0.05),
+    Offset end = Offset.zero,
+    Curve curve = Curves.easeOutCubic,
+  }) {
+    return child
+      .animate()
+      .fadeIn(duration: duration, curve: curve)
+      .slide(begin: begin, end: end, duration: duration, curve: curve);
+  }
 
   
   /// Apply a staggered animation for list items with variable effects
@@ -227,12 +239,11 @@ class _ModernHoverEffect extends StatefulWidget {
   final Duration duration;
 
   const _ModernHoverEffect({
-    Key? key,
     required this.child,
     required this.scale,
     required this.elevation,
     required this.duration,
-  }) : super(key: key);
+  });
 
   @override
   State<_ModernHoverEffect> createState() => _ModernHoverEffectState();
