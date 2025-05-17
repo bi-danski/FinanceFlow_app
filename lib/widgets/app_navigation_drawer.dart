@@ -149,7 +149,21 @@ class AppNavigationDrawer extends StatelessWidget {
             index: 2,
             title: 'Goals',
             icon: FontAwesomeIcons.bullseye,
-            route: AppConstants.goalsRoute,
+            route: '/enhanced-goals',
+          ),
+          _buildNavItem(
+            context,
+            index: 10,
+            title: 'Spending Heatmap',
+            icon: FontAwesomeIcons.calendarDay,
+            route: '/spending-heatmap',
+          ),
+          _buildNavItem(
+            context,
+            index: 11,
+            title: 'Challenges',
+            icon: FontAwesomeIcons.trophy,
+            route: '/spending-challenges',
           ),
           const Divider(height: 1),
           const Padding(
