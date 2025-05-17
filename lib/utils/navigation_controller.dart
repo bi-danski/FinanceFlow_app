@@ -122,7 +122,7 @@ class NavigationController {
 // These are placeholder classes - in a real implementation, these
 // would be replaced with imports to your actual screen widgets
 class DashboardScreenPlaceholder extends StatelessWidget {
-  const DashboardScreenPlaceholder({Key? key}) : super(key: key);
+  const DashboardScreenPlaceholder({super.key});
   @override
   Widget build(BuildContext context) => const Scaffold(body: Center(child: Text('Dashboard')));
 }
@@ -134,19 +134,19 @@ class InsightsScreenPlaceholder extends StatelessWidget {
 }
 
 class SettingsScreenPlaceholder extends StatelessWidget {
-  const SettingsScreenPlaceholder({Key? key}) : super(key: key);
+  const SettingsScreenPlaceholder({super.key});
   @override
   Widget build(BuildContext context) => const Scaffold(body: Center(child: Text('Settings')));
 }
 
 class AccountsScreenPlaceholder extends StatelessWidget {
-  const AccountsScreenPlaceholder({Key? key}) : super(key: key);
+  const AccountsScreenPlaceholder({super.key});
   @override
   Widget build(BuildContext context) => const Scaffold(body: Center(child: Text('Accounts')));
 }
 
 class TransactionsScreenPlaceholder extends StatelessWidget {
-  const TransactionsScreenPlaceholder({Key? key}) : super(key: key);
+  const TransactionsScreenPlaceholder({super.key});
   @override
   Widget build(BuildContext context) => const Scaffold(body: Center(child: Text('Transactions')));
 }

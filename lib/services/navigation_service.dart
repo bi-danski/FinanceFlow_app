@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../constants/app_constants.dart';
 import '../views/dashboard/dashboard_screen.dart';
 import '../views/expenses/expenses_screen.dart';
 import '../views/goals/goals_screen.dart';
+import '../views/goals/enhanced_goals_screen.dart';
 import '../views/reports/reports_screen.dart';
 import '../views/family/family_screen.dart';
 import '../views/settings/settings_screen.dart';
@@ -10,6 +12,8 @@ import '../views/budgets/budgets_screen.dart';
 import '../views/income/income_screen.dart';
 import '../views/loans/loans_screen.dart';
 import '../views/insights/insights_screen.dart';
+import '../views/insights/spending_heatmap_screen.dart';
+import '../views/challenges/spending_challenges_screen.dart';
 
 class NavigationService {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -38,26 +42,32 @@ class NavigationService {
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
-      case '/dashboard':
+      case AppConstants.dashboardRoute:
         return MaterialPageRoute(builder: (_) => const DashboardScreen());
-      case '/expenses':
+      case AppConstants.expensesRoute:
         return MaterialPageRoute(builder: (_) => const ExpensesScreen());
-      case '/goals':
+      case AppConstants.goalsRoute:
         return MaterialPageRoute(builder: (_) => const GoalsScreen());
-      case '/reports':
+      case '/enhanced-goals':
+        return MaterialPageRoute(builder: (_) => const EnhancedGoalsScreen());
+      case AppConstants.reportsRoute:
         return MaterialPageRoute(builder: (_) => const ReportsScreen());
-      case '/family':
+      case AppConstants.familyRoute:
         return MaterialPageRoute(builder: (_) => const FamilyScreen());
-      case '/settings':
+      case AppConstants.settingsRoute:
         return MaterialPageRoute(builder: (_) => const SettingsScreen());
       case '/budgets':
         return MaterialPageRoute(builder: (_) => const BudgetsScreen());
-      case '/income':
+      case AppConstants.incomeRoute:
         return MaterialPageRoute(builder: (_) => const IncomeScreen());
-      case '/loans':
+      case AppConstants.loansRoute:
         return MaterialPageRoute(builder: (_) => const LoansScreen());
-      case '/insights':
+      case AppConstants.insightsRoute:
         return MaterialPageRoute(builder: (_) => const InsightsScreen());
+      case '/spending-heatmap':
+        return MaterialPageRoute(builder: (_) => const SpendingHeatmapScreen());
+      case '/spending-challenges':
+        return MaterialPageRoute(builder: (_) => const SpendingChallengesScreen());
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(
