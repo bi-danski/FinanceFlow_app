@@ -101,7 +101,7 @@ class InsightsService {
     Map<String, List<app_models.Transaction>> categorizedTransactions = {};
     for (var transaction in transactions) {
       if (transaction.amount < 0) { // Only consider expenses
-        final category = transaction.category ?? 'Uncategorized';
+        final category = transaction.category;
         if (!categorizedTransactions.containsKey(category)) {
           categorizedTransactions[category] = [];
         }
@@ -222,7 +222,7 @@ class InsightsService {
     Map<String, List<app_models.Transaction>> categorizedTransactions = {};
     for (var transaction in transactions) {
       if (transaction.amount < 0) { // Only consider expenses
-        final category = transaction.category ?? 'Uncategorized';
+        final category = transaction.category;
         if (!categorizedTransactions.containsKey(category)) {
           categorizedTransactions[category] = [];
         }
