@@ -12,10 +12,10 @@ class TransactionFormScreen extends StatefulWidget {
   final bool isExpense; // Default to expense form
 
   const TransactionFormScreen({
-    Key? key,
+    super.key,
     this.transaction,
     this.isExpense = true,
-  }) : super(key: key);
+  });
 
   @override
   State<TransactionFormScreen> createState() => _TransactionFormScreenState();
