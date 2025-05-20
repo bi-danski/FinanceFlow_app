@@ -227,6 +227,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _buildRecentTransactions(),
                 const SizedBox(height: 24),
                 
+                // Enhanced Budget Navigation Button
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/enhanced_budget');
+                    },
+                    icon: const Icon(Icons.pie_chart),
+                    label: const Text('Enhanced Budget Management'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 24.0),
+                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      elevation: 4,
+                      minimumSize: const Size(double.infinity, 56),
+                    ),
+                  ).animate()
+                    .fadeIn(duration: const Duration(milliseconds: 600))
+                    .slideY(begin: 0.2, end: 0),
+                ),
+                const SizedBox(height: 24),
+                
                 // Custom dashboard section with enhanced animations
                 EnhancedAnimations.cardEntrance(
                   _buildDashboardHeader(),
@@ -248,14 +271,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
-      floatingActionButton: AddTransactionFAB(
-        onTransactionAdded: () {
-          _loadData();
-        },
-      )
-          .animate()
-          .scale(begin: const Offset(0, 0), end: const Offset(1, 1), 
-                curve: Curves.elasticOut, duration: const Duration(milliseconds: 800)),
+      floatingActionButton: Stack(
+        alignment: Alignment.bottomRight,
+        children: [
+          // Enhanced Budget Button
+          Positioned(
+            bottom: 80,
+            right: 0,
+            child: FloatingActionButton.extended(
+              heroTag: 'enhancedBudget',
+              onPressed: () {
+                Navigator.pushNamed(context, '/enhanced_budget');
+              },
+              backgroundColor: Colors.purple,
+              foregroundColor: Colors.white,
+              elevation: 4,
+              label: const Text('Enhanced Budget'),
+              icon: const Icon(Icons.pie_chart),
+            ).animate()
+              .fadeIn(duration: const Duration(milliseconds: 800))
+              .slideX(begin: 0.5, end: 0.0),
+          ),
+          // Original Add Transaction FAB
+          AddTransactionFAB(
+            onTransactionAdded: () {
+              _loadData();
+            },
+          )
+              .animate()
+              .scale(begin: const Offset(0, 0), end: const Offset(1, 1), 
+                    curve: Curves.elasticOut, duration: const Duration(milliseconds: 800)),
+        ],
+      ),
     );
   }
   

@@ -19,6 +19,7 @@ import 'views/dashboard/dashboard_screen.dart';
 import 'views/onboarding/splash_screen.dart';
 import 'views/onboarding/onboarding_screen.dart';
 import 'views/insights/enhanced_insights_screen.dart';
+import 'views/budgets/enhanced_budget_management_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -67,6 +68,7 @@ class FinanceFlowApp extends StatelessWidget {
         '/dashboard': (context) => const DashboardScreen(),
         '/onboarding': (context) => const OnboardingScreen(),
         '/enhanced_insights': (context) => const EnhancedInsightsScreen(),
+        '/enhanced_budget': (context) => const EnhancedBudgetManagementScreen(),
       },
       onGenerateRoute: NavigationService.generateRoute,
       debugShowCheckedModeBanner: false,

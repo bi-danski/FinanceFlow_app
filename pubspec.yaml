@@ -67,6 +67,7 @@ dependencies:
   
   # Utilities
   uuid: ^4.3.3
+  vector_math: ^2.1.4
   
   # Progress indicators
   percent_indicator: ^4.2.3
