@@ -288,7 +288,7 @@ class _AddTransactionFABState extends State<AddTransactionFAB> with SingleTicker
     if (!mounted) return;
     
     // Get current context but don't store it in a variable that crosses an await
-    final result = await Navigator.of(this.context).push(pageRoute) as bool?;
+    final result = await Navigator.of(context).push(pageRoute) as bool?;
     
     // Check mounted again after async operation
     if (!mounted) return;

@@ -242,7 +242,7 @@ class _InteractiveCashFlowTimelineState extends State<InteractiveCashFlowTimelin
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         // List of events for this day (limit to 2)
-                        ...dayEvents.take(2).map((event) => _buildEventItem(event)).toList(),
+                        ...dayEvents.take(2).map((event) => _buildEventItem(event)),
                         
                         // Show count if more than 2 events
                         if (dayEvents.length > 2)
