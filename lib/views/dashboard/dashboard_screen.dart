@@ -6,6 +6,10 @@ import 'package:uuid/uuid.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/services.dart';
 
+import '../../services/connectivity_service.dart';
+import '../../widgets/sync_status_indicator.dart';
+import '../../widgets/add_transaction_fab.dart';
+
 import '../../viewmodels/transaction_viewmodel.dart';
 import '../../viewmodels/budget_viewmodel.dart';
 import '../../viewmodels/goal_viewmodel.dart';
@@ -169,6 +173,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   
   @override
   Widget build(BuildContext context) {
+    final transactionViewModel = Provider.of<TransactionViewModel>(context);
+    final budgetViewModel = Provider.of<BudgetViewModel>(context);
+    final goalViewModel = Provider.of<GoalViewModel>(context);
+    final connectivityService = ConnectivityService.instance;
+    final bool isOnline = connectivityService.isOnline;
+    final bool isSyncing = transactionViewModel.isLoading || budgetViewModel.isLoading || goalViewModel.isLoading;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard')
@@ -176,6 +187,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
             .fadeIn(duration: const Duration(milliseconds: 500)),
         elevation: 0,
         actions: [
+          // Sync status indicator
+          SyncStatusIndicator(
+            isSyncing: isSyncing,
+            tooltip: isSyncing ? 'Syncing data...' : 'Data synced',
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(isSyncing ? 'Syncing data with cloud...' : 'All data synced'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
           IconButton(
             icon: Icon(_isEditMode ? Icons.edit_off : Icons.edit),
             onPressed: _toggleEditMode,
@@ -186,94 +211,115 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 .animate(onPlay: (controller) => controller.repeat(reverse: true))
                 .scale(begin: const Offset(1, 1), end: const Offset(1.1, 1.1), 
                       duration: const Duration(seconds: 2)),
-            onPressed: () {
-              // Handle notifications
-            },
-          ),
+            onPressed: () {},
+            tooltip: 'Notifications',
+          ),  
         ],
       ),
       drawer: AppNavigationDrawer(
         selectedIndex: _selectedIndex,
         onItemSelected: _onItemSelected,
       ),
-      body: RefreshIndicator(
-        onRefresh: _loadData,
-        color: Theme.of(context).colorScheme.primary,
-        backgroundColor: Colors.white,
-        strokeWidth: 3.0,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Animated month selector with modern hover effect
-                EnhancedAnimations.modernHoverEffect(
-                  child: _buildMonthSelector(),
-                  scale: 1.02,
-                  elevation: 3.5,
-                  duration: const Duration(milliseconds: 150),
-                ).animate()
-                  .fadeIn(duration: const Duration(milliseconds: 400))
-                  .slideX(begin: -0.1, end: 0),
-                const SizedBox(height: 16),
-                
-                // Premium financial summary with animated data
-                _buildEnhancedFinancialSummary(),
-                const SizedBox(height: 24),
-                
-                // Recent transactions with animations
-                _buildRecentTransactions(),
-                const SizedBox(height: 24),
-                
-                // Enhanced Budget Navigation Button
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/enhanced_budget');
-                    },
-                    icon: const Icon(Icons.pie_chart),
-                    label: const Text('Enhanced Budget Management'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purple,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 24.0),
-                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      elevation: 4,
-                      minimumSize: const Size(double.infinity, 56),
-                    ),
-                  ).animate()
-                    .fadeIn(duration: const Duration(milliseconds: 600))
-                    .slideY(begin: 0.2, end: 0),
+      body: Column(
+        children: [
+          // Offline banner at the top of the screen
+          if (!isOnline)
+            OfflineBanner(
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Trying to reconnect...')),
+                );
+              },
+            ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _loadData,
+              color: Theme.of(context).colorScheme.primary,
+              backgroundColor: Colors.white,
+              strokeWidth: 3.0,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Animated month selector with modern hover effect
+                      EnhancedAnimations.modernHoverEffect(
+                        child: _buildMonthSelector(),
+                        scale: 1.02,
+                        elevation: 3.5,
+                        duration: const Duration(milliseconds: 150),
+                      ).animate()
+                        .fadeIn(duration: const Duration(milliseconds: 400))
+                        .slideX(begin: -0.1, end: 0),
+                      const SizedBox(height: 16),
+                      
+                      // Premium financial summary with animated data
+                      _buildEnhancedFinancialSummary(),
+                      const SizedBox(height: 24),
+                      
+                      // Recent transactions with animations
+                      _buildRecentTransactions(),
+                      const SizedBox(height: 24),
+                      
+                      // Enhanced Budget Navigation Button
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/enhanced_budget');
+                          },
+                          icon: const Icon(Icons.pie_chart),
+                          label: const Text('Enhanced Budget Management'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.purple,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 24.0),
+                            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            elevation: 4,
+                            minimumSize: const Size(double.infinity, 56),
+                          ),
+                        ).animate()
+                          .fadeIn(duration: const Duration(milliseconds: 600))
+                          .slideY(begin: 0.2, end: 0),
+                      ),
+                      const SizedBox(height: 24),
+                      
+                      // Custom dashboard section with enhanced animations
+                      EnhancedAnimations.cardEntrance(
+                        _buildDashboardHeader(),
+                        index: 3,
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Dashboard widgets with staggered animations
+                      ...EnhancedAnimations.staggeredListEffects(_buildEnhancedDashboardWidgets()),
+                      
+                      // Add widget button with animation
+                      if (_isEditMode) _buildAnimatedAddWidgetButton(),
+                      
+                      const SizedBox(height: 32),
+                      const Divider(),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 24),
-                
-                // Custom dashboard section with enhanced animations
-                EnhancedAnimations.cardEntrance(
-                  _buildDashboardHeader(),
-                  index: 3,
-                ),
-                const SizedBox(height: 16),
-                
-                // Dashboard widgets with staggered animations
-                ...EnhancedAnimations.staggeredListEffects(_buildEnhancedDashboardWidgets()),
-                
-                // Add widget button with animation
-                if (_isEditMode) _buildAnimatedAddWidgetButton(),
-                
-                const SizedBox(height: 32),
-                const Divider(),
-                const SizedBox(height: 16),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
       floatingActionButton: Stack(
         alignment: Alignment.bottomRight,
         children: [
+          // Main add transaction button
+          AddTransactionFAB(
+            onTransactionAdded: () {
+              // Refresh data when transaction is added
+              _loadData();
+            },
+          ),
           // Enhanced Budget Button
           Positioned(
             bottom: 80,
