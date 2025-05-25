@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'firebase_options.dart';
+import 'services/connectivity_service.dart';
+import 'services/firebase_auth_service.dart';
+import 'services/realtime_data_service.dart';
 import 'viewmodels/transaction_viewmodel.dart';
 import 'viewmodels/budget_viewmodel.dart';
 import 'viewmodels/goal_viewmodel.dart';
@@ -24,11 +31,51 @@ import 'views/budgets/enhanced_budget_management_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Firebase initialization removed to fix web compatibility issues
-  debugPrint('Running app with local authentication');
+  // Initialize Firebase with the generated options
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    debugPrint('Firebase initialized successfully');
+    
+    // Enable Firestore offline persistence
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED
+    );
+    debugPrint('Firestore offline persistence enabled');
+    
+    // Initialize ConnectivityService for offline support
+    final connectivityService = ConnectivityService.instance;
+    await connectivityService.initialize();
+    debugPrint('Connectivity service initialized');
+    
+    // Initialize Firebase Auth service
+    final firebaseAuthService = FirebaseAuthService.instance;
+    await firebaseAuthService.initialize();
+    debugPrint('Firebase Auth initialized successfully');
+    
+    // Initialize the RealtimeDataService for real-time data updates
+    final realtimeDataService = RealtimeDataService.instance;
+    // Listen for auth state changes to start/stop streams
+    FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user != null) {
+        // User is signed in, start real-time data streams
+        realtimeDataService.initializeStreams();
+        debugPrint('Started real-time data streams for user: ${user.uid}');
+      } else {
+        // User is signed out, stop streams
+        realtimeDataService.dispose();
+        debugPrint('Stopped real-time data streams');
+      }
+    });
+  } catch (e) {
+    debugPrint('Failed to initialize Firebase: $e');
+    // Fallback to local authentication if Firebase fails
+    debugPrint('Falling back to local authentication');
+  }
 
-  
-  // Initialize auth service
+  // Initialize local auth service (temporary, will be removed in full migration)
   final authService = AuthService.instance;
   await authService.initialize();
   
@@ -36,6 +83,8 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: authService),
+        // Add the RealtimeDataService for real-time data updates
+        ChangeNotifierProvider.value(value: RealtimeDataService.instance),
         ChangeNotifierProvider(create: (_) => TransactionViewModel()),
         ChangeNotifierProvider(create: (_) => BudgetViewModel()),
         ChangeNotifierProvider(create: (_) => GoalViewModel()),

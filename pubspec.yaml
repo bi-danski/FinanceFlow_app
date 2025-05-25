@@ -69,12 +69,22 @@ dependencies:
   uuid: ^4.3.3
   vector_math: ^2.1.4
   
+  # Firebase
+  firebase_core: ^2.26.0
+  firebase_auth: ^4.17.7
+  cloud_firestore: ^4.15.7
+  firebase_analytics: ^10.8.8
+  firebase_storage: ^11.6.8
+  
   # Progress indicators
   percent_indicator: ^4.2.3
   
   # Calendar
   table_calendar: ^3.0.9
   crypto: ^3.0.6
+  
+  # Network connectivity
+  connectivity_plus: ^5.0.2
 
 dev_dependencies:
   flutter_test:
