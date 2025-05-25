@@ -39,4 +39,22 @@ class Budget {
 
   double get remainingAmount => amount - spent;
   double get percentUsed => (spent / amount) * 100;
+  
+  Budget copyWith({
+    int? id,
+    String? category,
+    double? amount,
+    DateTime? startDate,
+    DateTime? endDate,
+    double? spent,
+  }) {
+    return Budget(
+      id: id ?? this.id,
+      category: category ?? this.category,
+      amount: amount ?? this.amount,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      spent: spent ?? this.spent,
+    );
+  }
 }
