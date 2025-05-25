@@ -1,41 +1,123 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../models/loan_model.dart';
 import '../services/database_service.dart';
+import '../services/firestore_service.dart';
+import '../services/realtime_data_service.dart';
 
 class LoanViewModel extends ChangeNotifier {
   final DatabaseService _databaseService = DatabaseService.instance;
+  final FirestoreService _firestoreService = FirestoreService.instance;
+  final RealtimeDataService _realtimeDataService = RealtimeDataService.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  
   List<Loan> _loans = [];
   bool _isLoading = false;
+  bool _useFirestore = false; // Flag to determine if we should use Firestore or SQLite
+  StreamSubscription<List<Loan>>? _loanSubscription;
   final Logger logger = Logger('LoanViewModel');
 
   List<Loan> get loans => _loans;
   bool get isLoading => _isLoading;
+  bool get useFirestore => _useFirestore;
+  
+  LoanViewModel() {
+    // Check if user is authenticated to determine data source
+    _checkDataSource();
+  }
+  
+  /// Check if we should use Firestore or SQLite
+  void _checkDataSource() {
+    final user = _auth.currentUser;
+    _useFirestore = user != null;
+    logger.info('Using Firestore: $_useFirestore');
+    
+    if (_useFirestore) {
+      // Subscribe to real-time updates if using Firestore
+      _subscribeToLoans();
+    } else {
+      // Load from SQLite if not using Firestore
+      loadLoans();
+    }
+  }
+  
+  /// Subscribe to real-time loan updates from Firestore
+  void _subscribeToLoans() {
+    logger.info('Subscribing to loan updates');
+    
+    // Cancel any existing subscription
+    _loanSubscription?.cancel();
+    
+    // Start the loans stream if not already started
+    _realtimeDataService.startLoansStream();
+    
+    // Subscribe to the stream
+    _loanSubscription = _realtimeDataService.loansStream.listen(
+      (loans) {
+        _loans = loans;
+        _isLoading = false;
+        logger.info('Received ${_loans.length} loans');
+        notifyListeners();
+      },
+      onError: (error) {
+        logger.severe('Error in loan stream: $error');
+        _isLoading = false;
+        notifyListeners();
+      }
+    );
+  }
 
   Future<void> loadLoans() async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      _loans = await _databaseService.getLoans();
-    } catch (e) {
-      logger.info('Error loading loans: $e');
-    } finally {
-      _isLoading = false;
+    if (_useFirestore) {
+      // For Firestore, we're already subscribed to real-time updates
+      // Just update the loading state
+      _isLoading = true;
       notifyListeners();
+      
+      // The stream listener will handle updating loans
+      // Just set a timeout to ensure we don't stay in loading state indefinitely
+      Future.delayed(const Duration(seconds: 2), () {
+        if (_isLoading) {
+          _isLoading = false;
+          notifyListeners();
+        }
+      });
+    } else {
+      // For SQLite, load from the database
+      _isLoading = true;
+      notifyListeners();
+
+      try {
+        _loans = await _databaseService.getLoans();
+      } catch (e) {
+        logger.info('Error loading loans: $e');
+      } finally {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<bool> addLoan(Loan loan) async {
     try {
-      if (loan.id == null) {
-        // New loan
-        await _databaseService.insertLoan(loan);
+      if (_useFirestore) {
+        // For Firestore, save to cloud
+        await _firestoreService.saveLoan(loan);
+        // The stream listener will handle updating the UI
       } else {
-        // Update existing loan
-        await _databaseService.updateLoan(loan);
+        // For SQLite, save to local database
+        if (loan.id == null) {
+          // New loan
+          await _databaseService.insertLoan(loan);
+        } else {
+          // Update existing loan
+          await _databaseService.updateLoan(loan);
+        }
+        await loadLoans();
       }
-      await loadLoans();
       return true;
     } catch (e) {
       logger.warning('Error adding/updating loan: $e');
@@ -45,8 +127,15 @@ class LoanViewModel extends ChangeNotifier {
 
   Future<bool> deleteLoan(int id) async {
     try {
-      await _databaseService.deleteLoan(id);
-      await loadLoans();
+      if (_useFirestore) {
+        // For Firestore, delete from cloud
+        await _firestoreService.deleteLoan(id.toString());
+        // The stream listener will handle updating the UI
+      } else {
+        // For SQLite, delete from local database
+        await _databaseService.deleteLoan(id);
+        await loadLoans();
+      }
       return true;
     } catch (e) {
       logger.warning('Error deleting loan: $e');
@@ -62,8 +151,15 @@ class LoanViewModel extends ChangeNotifier {
         status: (loan.amountPaid + amount) >= loan.totalAmount ? 'Paid' : 'Active',
       );
       
-      await _databaseService.updateLoan(updatedLoan);
-      await loadLoans();
+      if (_useFirestore) {
+        // For Firestore, save to cloud
+        await _firestoreService.saveLoan(updatedLoan);
+        // The stream listener will handle updating the UI
+      } else {
+        // For SQLite, update in local database
+        await _databaseService.updateLoan(updatedLoan);
+        await loadLoans();
+      }
       return true;
     } catch (e) {
       logger.warning('Error recording loan payment: $e');
@@ -130,5 +226,13 @@ class LoanViewModel extends ChangeNotifier {
       
       return nextPayment.isAfter(now) && nextPayment.isBefore(cutoff);
     }).toList();
+  }
+  
+  @override
+  void dispose() {
+    // Cancel the loan subscription to prevent memory leaks
+    _loanSubscription?.cancel();
+    logger.info('Disposing LoanViewModel');
+    super.dispose();
   }
 }
