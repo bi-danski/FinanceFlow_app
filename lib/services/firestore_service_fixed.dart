@@ -7,7 +7,6 @@ import '../models/budget_model.dart';
 import '../models/goal_model.dart';
 import '../models/income_source_model.dart';
 import '../models/loan_model.dart';
-import '../models/insight_model.dart';
 
 /// Firestore database service for FinanceFlow app
 /// Handles cloud database operations for all app data
