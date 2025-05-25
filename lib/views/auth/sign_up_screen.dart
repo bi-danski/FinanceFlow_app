@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:provider/provider.dart';
-import '../../services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/firebase_auth_service.dart';
 import '../../themes/app_theme.dart';
 import '../../utils/enhanced_animations.dart';
 
@@ -21,6 +21,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreeToTerms = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -33,31 +34,75 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   Future<void> _signUp() async {
     if (_formKey.currentState!.validate() && _agreeToTerms) {
-      final authService = Provider.of<AuthService>(context, listen: false);
+      final authService = FirebaseAuthService.instance;
       
-      final success = await authService.register(
-        name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
-      
-      if (success && mounted) {
-        // Navigate to dashboard
-        Navigator.pushReplacementNamed(context, '/dashboard');
-      } else if (mounted) {
-        // Show error message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authService.error ?? 'Registration failed'),
-            backgroundColor: Colors.red,
-          ),
+      try {
+        // Show loading state
+        setState(() => _isLoading = true);
+        
+        // Attempt to register with Firebase
+        await authService.registerWithEmailAndPassword(
+          _emailController.text.trim(),
+          _passwordController.text,
+          _nameController.text.trim(),
         );
+        
+        if (mounted) {
+          // Navigate to dashboard on success
+          Navigator.pushReplacementNamed(context, '/dashboard');
+        }
+      } on FirebaseAuthException catch (e) {
+        // Handle specific Firebase Auth errors with user-friendly messages
+        String errorMessage = 'An error occurred during registration';
+        
+        if (e.code == 'email-already-in-use') {
+          errorMessage = 'This email is already in use';
+        } else if (e.code == 'weak-password') {
+          errorMessage = 'Password is too weak. Use at least 6 characters';
+        } else if (e.code == 'invalid-email') {
+          errorMessage = 'Invalid email format';
+        } else if (e.code == 'network-request-failed') {
+          errorMessage = 'Network error. Check your connection';
+        }
+        
+        if (mounted) {
+          // Show animated error message
+          final snackBar = SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          );
+          
+          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        }
+      } catch (e) {
+        // Handle generic errors
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Registration failed: $e'),
+              backgroundColor: Colors.redAccent,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } finally {
+        // Reset loading state if widget is still mounted
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
     } else if (!_agreeToTerms && mounted) {
+      // Show error if terms not agreed to
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please agree to the Terms and Conditions'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: const Text('Please agree to the Terms and Conditions'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       );
     }
@@ -65,7 +110,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context);
+    final authService = FirebaseAuthService.instance;
     
     return Scaffold(
       body: Stack(
@@ -182,7 +227,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  Widget _buildForm(AuthService authService) {
+  Widget _buildForm(FirebaseAuthService authService) {
     return Form(
       key: _formKey,
       child: Card(
@@ -346,7 +391,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               // Sign up button
               EnhancedAnimations.modernHoverEffect(
                 child: ElevatedButton(
-                  onPressed: authService.isLoading ? null : _signUp,
+                  onPressed: _isLoading ? null : _signUp,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.accentColor,
                     foregroundColor: Colors.white,
@@ -355,8 +400,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: authService.isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.0,
+                          ),
+                        )
                       : const Text(
                           'CREATE ACCOUNT',
                           style: TextStyle(

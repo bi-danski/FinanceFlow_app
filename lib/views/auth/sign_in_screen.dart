@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:provider/provider.dart';
-import '../../services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/firebase_auth_service.dart';
 import '../../themes/app_theme.dart';
 import '../../utils/enhanced_animations.dart';
 import 'sign_up_screen.dart';
@@ -20,6 +20,7 @@ class _SignInScreenState extends State<SignInScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _rememberMe = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -30,31 +31,76 @@ class _SignInScreenState extends State<SignInScreen> {
 
   Future<void> _signIn() async {
     if (_formKey.currentState!.validate()) {
-      final authService = Provider.of<AuthService>(context, listen: false);
+      final authService = FirebaseAuthService.instance;
       
-      final success = await authService.login(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
-      
-      if (success && mounted) {
-        // Navigate to dashboard
-        Navigator.pushReplacementNamed(context, '/dashboard');
-      } else if (mounted) {
-        // Show error message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authService.error ?? 'Login failed'),
-            backgroundColor: Colors.red,
-          ),
+      try {
+        // Show loading state
+        setState(() => _isLoading = true);
+        
+        // Attempt to sign in with Firebase
+        await authService.signInWithEmailAndPassword(
+          _emailController.text.trim(),
+          _passwordController.text,
         );
+        
+        if (mounted) {
+          // Navigate to dashboard on success
+          Navigator.pushReplacementNamed(context, '/dashboard');
+        }
+      } on FirebaseAuthException catch (e) {
+        // Handle specific Firebase Auth errors with user-friendly messages
+        String errorMessage = 'An error occurred during sign in';
+        
+        if (e.code == 'user-not-found') {
+          errorMessage = 'No user found with this email';
+        } else if (e.code == 'wrong-password') {
+          errorMessage = 'Incorrect password';
+        } else if (e.code == 'invalid-credential') {
+          errorMessage = 'Invalid email or password';
+        } else if (e.code == 'user-disabled') {
+          errorMessage = 'This account has been disabled';
+        } else if (e.code == 'too-many-requests') {
+          errorMessage = 'Too many attempts. Please try again later';
+        } else if (e.code == 'network-request-failed') {
+          errorMessage = 'Network error. Check your connection';
+        }
+        
+        if (mounted) {
+          // Show animated error message
+          final snackBar = SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          );
+          
+          ScaffoldMessenger.of(context)
+            .showSnackBar(snackBar);
+        }
+      } catch (e) {
+        // Handle generic errors
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Sign in failed: $e'),
+              backgroundColor: Colors.redAccent,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } finally {
+        // Reset loading state if widget is still mounted
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context);
+    final authService = FirebaseAuthService.instance;
     
     return Scaffold(
       body: Stack(
@@ -160,7 +206,7 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
-  Widget _buildForm(AuthService authService) {
+  Widget _buildForm(FirebaseAuthService authService) {
     return Form(
       key: _formKey,
       child: Card(
@@ -275,17 +321,25 @@ class _SignInScreenState extends State<SignInScreen> {
               // Sign in button
               EnhancedAnimations.modernHoverEffect(
                 child: ElevatedButton(
-                  onPressed: authService.isLoading ? null : _signIn,
+                  onPressed: _isLoading ? null : _signIn,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.accentColor,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppTheme.primaryColor,
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    minimumSize: const Size(double.infinity, 50),
+                    elevation: 3,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: authService.isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.0,
+                          ),
+                        )
                       : const Text(
                           'SIGN IN',
                           style: TextStyle(
