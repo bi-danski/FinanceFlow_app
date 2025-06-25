@@ -62,26 +62,221 @@ class DatabaseService {
     }
   }
 
-  // Initialize mock data for web platform
+  // Flag to control mock data usage
+  bool useMockData = false;
+
+  // Initialize mock data for web platform or when useMockData is true
   Future<void> _initMockData() async {
-    _logger.info('Initializing mock data for web platform');
-    
-    // Add a mock user
+    _logger.info('Initializing mock data for web platform or mock mode');
+    final now = DateTime.now();
     try {
-      await insertUser(
-        User(
-          id: 1,
-          email: 'demo@example.com',
-          name: 'Demo User',
-          createdAt: DateTime.now(),
-          lastLogin: DateTime.now(),
-          preferences: {},
-        ),
-        'password123'
+      // Only insert if users table is empty
+      final db = await database;
+      final userCount = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM users'),
       );
-      _logger.info('Added mock user: demo@example.com / password123');
+      if (userCount == 0) {
+        await insertUser(
+          User(
+            id: 1,
+            email: 'demo@example.com',
+            name: 'Demo User',
+            createdAt: DateTime.now(),
+            lastLogin: DateTime.now(),
+            preferences: {},
+          ),
+          'password123',
+        );
+        _logger.info('Added mock user: demo@example.com / password123');
+      }
+
+      // Insert mock transactions if table is empty
+      final txnCount = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM transactions'),
+      );
+      if (txnCount == 0) {
+        final now = DateTime.now();
+        final mockTransactions = [
+          app_models.TransactionModel(
+            title: 'Grocery Shopping',
+            amount: -75.50,
+            date: now.subtract(Duration(days: 2)),
+            category: 'Food',
+            type: app_models.TransactionType.expense,
+            userId: '1',
+            isSynced: true,
+            status: app_models.TransactionStatus.completed,
+          ),
+          app_models.TransactionModel(
+            title: 'Salary',
+            amount: 2500.00,
+            date: now.subtract(Duration(days: 5)),
+            category: 'Income',
+            type: app_models.TransactionType.income,
+            userId: '1',
+            isSynced: true,
+            status: app_models.TransactionStatus.completed,
+          ),
+          app_models.TransactionModel(
+            title: 'Electricity Bill',
+            amount: -120.00,
+            date: now.subtract(Duration(days: 10)),
+            category: 'Utilities',
+            type: app_models.TransactionType.expense,
+            userId: '1',
+            isSynced: true,
+            status: app_models.TransactionStatus.completed,
+          ),
+          app_models.TransactionModel(
+            title: 'Movie Night',
+            amount: -30.00,
+            date: now.subtract(Duration(days: 1)),
+            category: 'Entertainment',
+            type: app_models.TransactionType.expense,
+            userId: '1',
+            isSynced: true,
+            status: app_models.TransactionStatus.completed,
+          ),
+        ];
+        for (final txn in mockTransactions) {
+          await insertTransaction(txn);
+        }
+        _logger.info('Inserted mock transactions');
+      }
+
+      // Insert mock budgets if table is empty
+      final budgetCount = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM budgets'),
+      );
+      if (budgetCount == 0) {
+        final now = DateTime.now();
+        final mockBudgets = [
+          Budget(
+            category: 'Food',
+            amount: 400.0,
+            startDate: DateTime(now.year, now.month, 1),
+            endDate: DateTime(now.year, now.month + 1, 0),
+            spent: 75.50,
+          ),
+          Budget(
+            category: 'Utilities',
+            amount: 200.0,
+            startDate: DateTime(now.year, now.month, 1),
+            endDate: DateTime(now.year, now.month + 1, 0),
+            spent: 120.0,
+          ),
+          Budget(
+            category: 'Entertainment',
+            amount: 100.0,
+            startDate: DateTime(now.year, now.month, 1),
+            endDate: DateTime(now.year, now.month + 1, 0),
+            spent: 30.0,
+          ),
+        ];
+        for (final budget in mockBudgets) {
+          await insertBudget(budget);
+        }
+        _logger.info('Inserted mock budgets');
+      }
+
+      // Insert mock goals if table is empty
+      final goalCount = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM goals'),
+      );
+      if (goalCount == 0) {
+        final mockGoals = [
+          Goal(
+            name: 'Vacation Fund',
+            targetAmount: 2000.0,
+            currentAmount: 500.0,
+            targetDate: DateTime(now.year, now.month + 3, 1),
+            description: 'Trip to the coast',
+            category: 'Travel',
+            priority: 2,
+          ),
+          Goal(
+            name: 'New Laptop',
+            targetAmount: 1500.0,
+            currentAmount: 300.0,
+            targetDate: DateTime(now.year, now.month + 2, 1),
+            description: 'Upgrade for work',
+            category: 'Tech',
+            priority: 1,
+          ),
+        ];
+        for (final goal in mockGoals) {
+          await insertGoal(goal);
+        }
+        _logger.info('Inserted mock goals');
+      }
+
+      // Insert mock income sources if table is empty
+      final incomeCount = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM income_sources'),
+      );
+      if (incomeCount == 0) {
+        final mockIncomeSources = [
+          IncomeSource(
+            name: 'Full-time Job',
+            type: 'Salary',
+            amount: 2500.0,
+            date: DateTime(now.year, now.month, 1),
+            isRecurring: true,
+            frequency: 'Monthly',
+          ),
+          IncomeSource(
+            name: 'Side Hustle',
+            type: 'Freelance',
+            amount: 400.0,
+            date: DateTime(now.year, now.month, 10),
+            isRecurring: false,
+            frequency: 'One-time',
+          ),
+        ];
+        for (final income in mockIncomeSources) {
+          await insertIncomeSource(income);
+        }
+        _logger.info('Inserted mock income sources');
+      }
+
+      // Insert mock loans if table is empty
+      final loanCount = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM loans'),
+      );
+      if (loanCount == 0) {
+        final mockLoans = [
+          Loan(
+            name: 'Car Loan',
+            totalAmount: 8000.0,
+            amountPaid: 1500.0,
+            interestRate: 5.5,
+            startDate: DateTime(now.year, now.month - 6, 1),
+            dueDate: DateTime(now.year, now.month + 18, 1),
+            lender: 'Bank A',
+            status: 'Active',
+            paymentFrequency: 'Monthly',
+            installmentAmount: 350.0,
+          ),
+          Loan(
+            name: 'Student Loan',
+            totalAmount: 12000.0,
+            amountPaid: 4000.0,
+            interestRate: 4.2,
+            startDate: DateTime(now.year - 2, now.month, 1),
+            dueDate: DateTime(now.year + 3, now.month, 1),
+            lender: 'Bank B',
+            status: 'Active',
+            paymentFrequency: 'Monthly',
+            installmentAmount: 220.0,
+          ),
+        ];
+        for (final loan in mockLoans) {
+          await insertLoan(loan);
+        }
+        _logger.info('Inserted mock loans');
+      }
     } catch (e) {
-      _logger.warning('Error adding mock user: $e');
+      _logger.warning('Error initializing mock data: $e');
     }
   }
 
@@ -267,11 +462,11 @@ class DatabaseService {
     });
   }
 
-  Future<List<app_models.Transaction>> getTransactionsByMonth(int year, int month) async {
-    _logger.info('Getting transactions for $month/$year');
+  Future<List<app_models.Transaction>> getTransactionsByMonth(DateTime month) async {
+    _logger.info('Getting transactions for $month');
     final db = await database;
-    final startDate = DateTime(year, month, 1);
-    final endDate = DateTime(year, month + 1, 0);
+    final startDate = DateTime(month.year, month.month, 1);
+    final endDate = DateTime(month.year, month.month + 1, 0);
     
     final List<Map<String, dynamic>> maps = await db.query(
       'transactions',
@@ -284,16 +479,17 @@ class DatabaseService {
     });
   }
 
-  Future<int> insertTransaction(app_models.Transaction transaction) async {
-    _logger.info('Inserting transaction: ${transaction.description}');
+  Future<String> insertTransaction(app_models.Transaction transaction) async {
+    _logger.info('Inserting transaction: ${transaction.title}');
     final db = await database;
-    return await db.insert('transactions', transaction.toMap());
+    final id = await db.insert('transactions', transaction.toMap());
+    return id.toString();
   }
 
-  Future<int> updateTransaction(app_models.Transaction transaction) async {
+  Future<void> updateTransaction(app_models.Transaction transaction) async {
     _logger.info('Updating transaction: ${transaction.id}');
     final db = await database;
-    return await db.update(
+    await db.update(
       'transactions',
       transaction.toMap(),
       where: 'id = ?',
@@ -301,10 +497,10 @@ class DatabaseService {
     );
   }
 
-  Future<int> deleteTransaction(int id) async {
+  Future<void> deleteTransaction(String id) async {
     _logger.info('Deleting transaction: $id');
     final db = await database;
-    return await db.delete(
+    await db.delete(
       'transactions',
       where: 'id = ?',
       whereArgs: [id],

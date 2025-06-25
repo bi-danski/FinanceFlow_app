@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/transaction_model.dart';
-import '../../viewmodels/transaction_viewmodel.dart';
+import '../../viewmodels/transaction_viewmodel_fixed.dart';
 import '../../widgets/animated_transaction_card.dart';
 import '../../utils/enhanced_animations.dart';
 
@@ -19,7 +19,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     super.initState();
     // Load transactions when the screen initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<TransactionViewModel>(context, listen: false).loadTransactions();
+      Provider.of<TransactionViewModel>(context, listen: false).loadTransactionsByMonth(DateTime.now());
     });
   }
 
@@ -63,8 +63,12 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       floatingActionButton: EnhancedAnimations.modernHoverEffect(
         child: FloatingActionButton(
           onPressed: () {
-            // Navigate to add transaction screen
-            Navigator.of(context).pushNamed('/add_transaction');
+            // Navigate to add transaction screen safely
+            if (mounted) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                Navigator.of(context).pushNamed('/add_transaction');
+              });
+            }
           },
           child: const Icon(Icons.add),
         ),
@@ -257,7 +261,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     // If confirmed, delete the transaction and show snackbar
     if (result == true && mounted) {
       // Delete transaction
-      await viewModel.deleteTransaction(transaction.id ?? 0);
+      await viewModel.deleteTransaction(transaction.id ?? '');
       
       // Show snackbar if still mounted
       if (mounted) {
@@ -326,7 +330,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                     _buildDetailItem('Amount', '\$${transaction.amount.abs().toStringAsFixed(2)}'),
                     _buildDetailItem('Category', transaction.category),
                     _buildDetailItem('Date', '${transaction.date.day}/${transaction.date.month}/${transaction.date.year}'),
-                    _buildDetailItem('Status', transaction.status),
+                    _buildDetailItem('Status', transaction.status.name),
                     // Note: Add notes field if needed in the Transaction model
                     // if (transaction.notes != null && transaction.notes!.isNotEmpty)
                     //   _buildDetailItem('Notes', transaction.notes!),
@@ -399,10 +403,14 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
 
   // Navigate to edit transaction
   void _navigateToEditTransaction(Transaction transaction) {
-    Navigator.of(context).pushNamed(
-      '/edit_transaction',
-      arguments: transaction,
-    );
+    if (mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).pushNamed(
+          '/edit_transaction',
+          arguments: transaction,
+        );
+      });
+    }
   }
 
   // Show filter options
@@ -439,7 +447,10 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       leading: Icon(icon, color: color),
       title: Text(title),
       onTap: () {
-        Navigator.of(context).pop();
+        // Only pop if possible to avoid navigation errors
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
         // Apply filter
         // This would be implemented in the viewmodel
       },
@@ -480,7 +491,10 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       leading: Icon(icon),
       title: Text(title),
       onTap: () {
-        Navigator.of(context).pop();
+        // Only pop if possible to avoid navigation errors
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
         // Apply sort
         // This would be implemented in the viewmodel
       },

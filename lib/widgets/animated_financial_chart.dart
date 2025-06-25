@@ -3,6 +3,333 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../utils/enhanced_animations.dart';
 import '../themes/app_theme.dart';
 
+/// Enum defining the types of financial charts available
+enum ChartType {
+  line,
+  bar,
+  pie,
+  donut,
+  area,
+  radar
+}
+
+/// A unified animated financial chart component that renders different chart types
+class AnimatedFinancialChart extends StatelessWidget {
+  final List<Map<String, dynamic>> data;
+  final ChartType type;
+  final double height;
+  final Function(Map<String, dynamic>)? onTap;
+  final String? title;
+  final bool animate;
+
+  const AnimatedFinancialChart({
+    super.key,
+    required this.data,
+    required this.type,
+    this.height = 300,
+    this.onTap,
+    this.title,
+    this.animate = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Check for empty or invalid data and display message
+    if (data.isEmpty) {
+      return Container(
+        height: height,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withValues(alpha: 0.1 * 255),
+              spreadRadius: 1,
+              blurRadius: 5,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.bar_chart,
+              size: 48,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No data available',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+            if (type == ChartType.line || type == ChartType.bar)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  'Data will appear here soon',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                ),
+              ),
+          ],
+        ).animate().fadeIn(duration: 500.ms),
+      );
+    }
+    
+    // Add an additional safeguard for any possible errors
+    try {
+      Widget chart;
+      
+      switch (type) {
+        case ChartType.pie:
+          chart = _buildPieChart(context);
+          break;
+        case ChartType.donut:
+          chart = _buildDonutChart(context);
+          break;
+        case ChartType.line:
+          chart = _buildLineChart(context);
+          break;
+        case ChartType.bar:
+          chart = _buildBarChart(context);
+          break;
+        case ChartType.area:
+          chart = _buildAreaChart(context);
+          break;
+        case ChartType.radar:
+          chart = _buildRadarChart(context);
+          break;
+      }
+      
+      // Apply animation if needed
+      if (animate) {
+        chart = chart.animate().fade(duration: 500.ms).scale(duration: 400.ms);
+      }
+      
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (title != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Text(
+                title!,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+          SizedBox(
+            height: height,
+            child: chart,
+          ),
+        ],
+      );
+    } catch (e) {
+      return SizedBox(
+        height: height,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.show_chart,
+                size: 40,
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5 * 255),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'An error occurred',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6 * 255),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ).animate().fade(duration: 300.ms);
+    }
+    
+  }
+  
+  // Build a pie chart visualization
+  Widget _buildPieChart(BuildContext context) {
+    // Simplified implementation for now
+    return CustomPaint(
+      painter: _PieChartPainter(
+        data: data,
+        onTapSegment: onTap,
+      ),
+      size: Size.infinite,
+    );
+  }
+  
+  // Build a donut chart visualization
+  Widget _buildDonutChart(BuildContext context) {
+    // Similar to pie chart but with inner circle cutout
+    return CustomPaint(
+      painter: _PieChartPainter(
+        data: data,
+        onTapSegment: onTap,
+        innerRadiusPercent: 0.5, // Inner cutout for donut style
+      ),
+      size: Size.infinite,
+    );
+  }
+  
+  // Build a line chart visualization
+  Widget _buildLineChart(BuildContext context) {
+    // Extract numeric data points from map data
+    final List<double> dataPoints = data
+        .map((item) => (item['amount'] as num).toDouble())
+        .toList();
+        
+    return AnimatedLineChart(
+      dataPoints: dataPoints,
+      height: height,
+      animate: animate,
+    );
+  }
+  
+  // Build a bar chart visualization
+  Widget _buildBarChart(BuildContext context) {
+    // Convert map data to bar chart entries
+    final List<BarChartEntry> entries = data
+        .map((item) => BarChartEntry(
+              label: item['category'] as String,
+              value: (item['amount'] as num).toDouble(),
+              color: ColorExtension.getColorForCategory(item['category'] as String),
+            ))
+        .toList();
+        
+    return AnimatedBarChart(
+      data: entries,
+      height: height,
+      animate: animate,
+    );
+  }
+  
+  // Build an area chart visualization
+  Widget _buildAreaChart(BuildContext context) {
+    // Similar to line chart but with filled area below
+    final List<double> dataPoints = data
+        .map((item) => (item['amount'] as num).toDouble())
+        .toList();
+        
+    return AnimatedLineChart(
+      dataPoints: dataPoints,
+      height: height,
+      showGradient: true, // Show gradient fill below line
+      animate: animate,
+    );
+  }
+  
+  // Build a radar chart visualization
+  Widget _buildRadarChart(BuildContext context) {
+    // Placeholder for radar chart implementation
+    return Center(
+      child: Text('Radar chart coming soon'),
+    );
+  }
+}
+
+// Using the existing BarChartEntry class defined below
+
+/// Painter for pie charts
+class _PieChartPainter extends CustomPainter {
+  final List<Map<String, dynamic>> data;
+  final Function(Map<String, dynamic>)? onTapSegment;
+  final double innerRadiusPercent;
+  
+  _PieChartPainter({
+    required this.data,
+    this.onTapSegment,
+    this.innerRadiusPercent = 0.0, // 0 for pie, >0 for donut
+  });
+  
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width < size.height ? size.width / 2 : size.height / 2;
+    
+    // Calculate total value for percentage calculations
+    final total = data.fold<double>(
+      0,
+      (sum, item) => sum + (item['amount'] as num).toDouble(),
+    );
+    
+    // Track the starting angle for each segment
+    double startAngle = 0;
+    
+    // Draw each segment
+    for (final item in data) {
+      final value = (item['amount'] as num).toDouble();
+      final sweepAngle = (value / total) * 2 * 3.14159; // Convert to radians
+      
+      final segmentPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = ColorExtension.getColorForCategory(item['category'] as String);
+      
+      // Draw the segment
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle,
+        sweepAngle,
+        true,
+        segmentPaint,
+      );
+      
+      // If it's a donut chart, draw the inner cutout
+      if (innerRadiusPercent > 0) {
+        final innerRadius = radius * innerRadiusPercent;
+        final cutoutPaint = Paint()
+          ..style = PaintingStyle.fill
+          ..color = Colors.white;
+        
+        canvas.drawCircle(center, innerRadius, cutoutPaint);
+      }
+      
+      // Update the start angle for the next segment
+      startAngle += sweepAngle;
+    }
+  }
+  
+  @override
+  bool shouldRepaint(covariant _PieChartPainter oldDelegate) {
+    return oldDelegate.data != data || 
+           oldDelegate.innerRadiusPercent != innerRadiusPercent;
+  }
+}
+
+/// Extension to get colors for different categories
+class ColorExtension {
+  static Color getColorForCategory(String category) {
+    // Map category names to consistent colors
+    switch (category.toLowerCase()) {
+      case 'food':
+        return Colors.orange;
+      case 'transport':
+        return Colors.blue;
+      case 'housing':
+        return Colors.green;
+      case 'utilities':
+        return Colors.purple;
+      case 'entertainment':
+        return Colors.pink;
+      case 'healthcare':
+        return Colors.red;
+      case 'education':
+        return Colors.indigo;
+      case 'shopping':
+        return Colors.teal;
+      case 'travel':
+        return Colors.amber;
+      case 'income':
+        return Colors.lightGreen;
+      default:
+        // Generate a color based on the category string for consistency
+        return Color(category.hashCode | 0xFF000000);
+    }
+  }
+}
+
 /// An animated line chart for financial data visualization
 class AnimatedLineChart extends StatelessWidget {
   final List<double> dataPoints;

@@ -21,6 +21,8 @@ class _SignInScreenState extends State<SignInScreen> {
   bool _obscurePassword = true;
   bool _rememberMe = false;
   bool _isLoading = false;
+  bool _isTestMode = false;
+  String? _verificationMessage;
 
   @override
   void dispose() {
@@ -35,15 +37,31 @@ class _SignInScreenState extends State<SignInScreen> {
       
       try {
         // Show loading state
-        setState(() => _isLoading = true);
+        setState(() {
+          _isLoading = true;
+          _verificationMessage = null;
+        });
+        
+        debugPrint('🔐 Starting user login process...');
         
         // Attempt to sign in with Firebase
-        await authService.signInWithEmailAndPassword(
+        final UserCredential userCredential = await authService.signInWithEmailAndPassword(
           _emailController.text.trim(),
           _passwordController.text,
         );
         
-        if (mounted) {
+        debugPrint('✅ User logged in successfully with UID: ${userCredential.user?.uid}');
+        
+        if (_isTestMode && userCredential.user != null) {
+          // In test mode, display success message instead of navigating
+          setState(() {
+            _isLoading = false;
+            _verificationMessage = 'Login successful! User authenticated with Firebase.';
+          });
+          return;
+        }
+        
+        if (mounted && !_isTestMode) {
           // Navigate to dashboard on success
           Navigator.pushReplacementNamed(context, '/dashboard');
         }
@@ -352,6 +370,54 @@ class _SignInScreenState extends State<SignInScreen> {
               .animate()
               .fadeIn(delay: 1200.ms, duration: 600.ms)
               .moveY(begin: 20, end: 0),
+              
+              // Test mode toggle
+              Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Test Mode', style: TextStyle(color: Colors.white70)),
+                    Switch(
+                      value: _isTestMode,
+                      onChanged: (value) {
+                        setState(() {
+                          _isTestMode = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Verification message for test mode
+              if (_verificationMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _verificationMessage!.contains('Error') 
+                        ? Colors.red.withValues(alpha: 0.2) 
+                        : Colors.green.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _verificationMessage!.contains('Error') 
+                          ? Colors.red 
+                          : Colors.green,
+                      ),
+                    ),
+                    child: Text(
+                      _verificationMessage!,
+                      style: TextStyle(
+                        color: _verificationMessage!.contains('Error') 
+                          ? Colors.red 
+                          : Colors.green,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ).animate().fadeIn(duration: 300.ms),
               
               const SizedBox(height: 24),
               

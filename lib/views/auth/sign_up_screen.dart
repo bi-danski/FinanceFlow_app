@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/firebase_auth_service.dart';
+import '../../services/firestore_service.dart';
 import '../../themes/app_theme.dart';
-import '../../utils/enhanced_animations.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -22,6 +22,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _obscureConfirmPassword = true;
   bool _agreeToTerms = false;
   bool _isLoading = false;
+  bool _isTestMode = false;
+  String? _verificationMessage;
 
   @override
   void dispose() {
@@ -35,19 +37,61 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> _signUp() async {
     if (_formKey.currentState!.validate() && _agreeToTerms) {
       final authService = FirebaseAuthService.instance;
+      final firestoreService = FirestoreService.instance;
       
       try {
         // Show loading state
-        setState(() => _isLoading = true);
+        setState(() {
+          _isLoading = true;
+          _verificationMessage = null;
+        });
+        
+        debugPrint('🔐 Starting user registration process...');
         
         // Attempt to register with Firebase
-        await authService.registerWithEmailAndPassword(
+        final UserCredential userCredential = await authService.registerWithEmailAndPassword(
           _emailController.text.trim(),
           _passwordController.text,
           _nameController.text.trim(),
         );
         
-        if (mounted) {
+        debugPrint('✅ User registered successfully with UID: ${userCredential.user?.uid}');
+        
+        // Verify user data was saved to Firestore
+        if (userCredential.user != null) {
+          debugPrint('🔍 Verifying user data in Firestore...');
+          
+          // Wait a moment for Firestore to update
+          await Future.delayed(const Duration(milliseconds: 500));
+          
+          // Check if user profile exists in Firestore
+          final userDoc = await firestoreService.getUserProfile(userCredential.user!.uid);
+          
+          if (userDoc.exists) {
+            final userData = userDoc.data() as Map<String, dynamic>;
+            debugPrint('📊 User data found in Firestore: ${userData.toString()}');
+            
+            if (_isTestMode) {
+              // For testing - show verification message instead of navigating
+              setState(() {
+                _isLoading = false;
+                _verificationMessage = 'Registration successful! User data verified in Firestore.';
+              });
+              return;
+            }
+          } else {
+            debugPrint('❌ User document not found in Firestore');
+            if (_isTestMode) {
+              setState(() {
+                _isLoading = false;
+                _verificationMessage = 'Error: User registered but data not found in Firestore';
+              });
+              return;
+            }
+          }
+        }
+        
+        if (mounted && !_isTestMode) {
           // Navigate to dashboard on success
           Navigator.pushReplacementNamed(context, '/dashboard');
         }
@@ -389,130 +433,91 @@ class _SignUpScreenState extends State<SignUpScreen> {
               const SizedBox(height: 24),
               
               // Sign up button
-              EnhancedAnimations.modernHoverEffect(
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _signUp,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.accentColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              ElevatedButton(
+                onPressed: _isLoading ? null : _signUp,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accentColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: _isLoading
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      'Create Account',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+              ),
+              
+              // Test mode toggle
+              Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Test Mode', style: TextStyle(color: Colors.white70)),
+                    Switch(
+                      value: _isTestMode,
+                      onChanged: (value) {
+                        setState(() {
+                          _isTestMode = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Verification message for test mode
+              if (_verificationMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _verificationMessage!.contains('Error') 
+                        ? Colors.red.withValues(alpha: 0.2) 
+                        : Colors.green.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _verificationMessage!.contains('Error') 
+                          ? Colors.red 
+                          : Colors.green,
+                      ),
+                    ),
+                    child: Text(
+                      _verificationMessage!,
+                      style: TextStyle(
+                        color: _verificationMessage!.contains('Error') 
+                          ? Colors.red 
+                          : Colors.green,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.0,
-                          ),
-                        )
-                      : const Text(
-                          'CREATE ACCOUNT',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
                 ),
-              )
-              .animate()
-              .fadeIn(delay: 1600.ms, duration: 600.ms)
-              .moveY(begin: 20, end: 0),
-              
-              const SizedBox(height: 24),
-              
-              // Social sign up
-              _buildSocialSignUp(),
             ],
           ),
         ),
-      )
-      .animate()
+      ).animate()
       .fadeIn(delay: 400.ms, duration: 800.ms)
       .scaleXY(begin: 0.9, end: 1.0),
     );
   }
 
-  Widget _buildSocialSignUp() {
-    return Column(
-      children: [
-        Text(
-          'Or sign up with',
-          style: TextStyle(color: Colors.grey),
-          textAlign: TextAlign.center,
-        ),
-        
-        const SizedBox(height: 16),
-        
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Google
-            _socialButton(
-              icon: 'assets/icons/google.png',
-              onTap: () {
-                // Implement Google sign up
-              },
-            ),
-            
-            const SizedBox(width: 16),
-            
-            // Apple
-            _socialButton(
-              icon: 'assets/icons/apple.png',
-              onTap: () {
-                // Implement Apple sign up
-              },
-            ),
-            
-            const SizedBox(width: 16),
-            
-            // Facebook
-            _socialButton(
-              icon: 'assets/icons/facebook.png',
-              onTap: () {
-                // Implement Facebook sign up
-              },
-            ),
-          ],
-        ),
-      ],
-    )
-    .animate()
-    .fadeIn(delay: 1800.ms, duration: 600.ms);
-  }
-
-  Widget _socialButton({required String icon, required VoidCallback onTap}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Center(
-          child: Image.asset(
-            icon,
-            width: 24,
-            height: 24,
-          ),
-        ),
-      ),
-    );
-  }
+  // Social login methods removed as they're not currently used
 
   Widget _buildSignInLink() {
     return Row(

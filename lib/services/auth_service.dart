@@ -33,35 +33,8 @@ class AuthService with ChangeNotifier {
     notifyListeners();
     
     try {
-      // For web platform, create a demo user automatically for easier testing
-      if (kIsWeb) {
-        _logger.info('Running on web platform - initializing demo mode');
-        // Auto-login with demo account on web to avoid Firebase issues
-        final demoUser = User(
-          id: 1,
-          email: 'demo@example.com',
-          name: 'Demo User',
-          createdAt: DateTime.now(),
-          lastLogin: DateTime.now(),
-          preferences: {},
-        );
-        
-        try {
-          // Try to add the demo user if it doesn't exist yet
-          await _databaseService.insertUser(demoUser, 'password123');
-        } catch (e) {
-          _logger.info('Demo user may already exist: $e');
-        }
-        
-        // Set as current user for immediate access
-        _currentUser = demoUser;
-        _isAuthenticated = true;
-        await _saveUserSession(demoUser);
-        _logger.info('Web demo mode initialized with demo@example.com');
-      } else {
-        // Normal session loading for mobile
-        await _loadUserSession();
-      }
+      // Load user session for all platforms
+      await _loadUserSession();
     } catch (e) {
       _logger.warning('Error initializing auth service: $e');
       _error = 'Failed to initialize authentication service';
@@ -113,6 +86,9 @@ class AuthService with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
   

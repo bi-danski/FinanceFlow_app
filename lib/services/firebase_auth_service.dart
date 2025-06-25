@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:logging/logging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'storage_service.dart';
 
 import '../models/user_model.dart' as app_models; // Use alias for our app's User model
 import 'firestore_service.dart';
@@ -205,51 +206,94 @@ class FirebaseAuthService extends ChangeNotifier {
     }
   }
   
-  /// Update user profile
-  Future<void> updateProfile({String? displayName, String? photoURL}) async {
+  /// Update user profile data
+  Future<void> updateUserProfile({String? displayName, String? email, String? profileImageUrl}) async {
     try {
-      if (_firebaseUser == null) throw Exception('No user logged in');
+      if (_firebaseUser == null) throw Exception('No authenticated user');
       
-      // Update Firebase Auth profile
+      // Update data in Firebase Auth
       if (displayName != null) {
         await _firebaseUser!.updateDisplayName(displayName);
       }
       
-      if (photoURL != null) {
-        await _firebaseUser!.updatePhotoURL(photoURL);
+      if (email != null) {
+        // Using verifyBeforeUpdateEmail instead of deprecated updateEmail
+        await _firebaseUser!.verifyBeforeUpdateEmail(email);
+        _logger.info('Verification email sent to update email address');
       }
       
-      // Reload user to get updated info
-      await _firebaseUser!.reload();
-      _firebaseUser = _auth.currentUser;
-      
-      // Update Firestore profile
-      Map<String, dynamic> updateData = {};
+      // Update data in Firestore
+      final Map<String, dynamic> updateData = {};
       
       if (displayName != null) {
         updateData['name'] = displayName;
       }
       
-      if (photoURL != null) {
-        updateData['photoURL'] = photoURL;
+      if (email != null) {
+        updateData['email'] = email;
       }
       
-      // Only update Firestore if we have data to update
+      if (profileImageUrl != null) {
+        updateData['profile_image_url'] = profileImageUrl;
+      }
+      
       if (updateData.isNotEmpty) {
-        updateData['updatedAt'] = FieldValue.serverTimestamp();
         await FirestoreService.instance.updateUserProfile(
-          _firebaseUser!.uid,
+          _firebaseUser!.uid, 
           updateData
         );
-        _logger.info('User profile updated in Firestore: ${_firebaseUser!.uid}');
       }
       
-      // Update app user model
+      // Reload user data
       await _loadUserProfile();
       
-      notifyListeners();
+      _logger.info('User profile updated successfully');
     } catch (e) {
-      _logger.severe('Error updating profile: $e');
+      _logger.severe('Error updating user profile: $e');
+      rethrow;
+    }
+  }
+  
+  /// Upload and update user profile image
+  Future<String> updateProfileImage(dynamic imageFile) async {
+    try {
+      if (_firebaseUser == null) throw Exception('No authenticated user');
+      
+      _logger.info('Uploading profile image for user: ${_firebaseUser!.uid}');
+      
+      // Upload image to Firebase Storage
+      final String imageUrl = await StorageService.instance.uploadProfileImage(
+        _firebaseUser!.uid,
+        imageFile
+      );
+      
+      // Update profile image URL in Firestore
+      await updateUserProfile(profileImageUrl: imageUrl);
+      
+      _logger.info('Profile image updated successfully');
+      return imageUrl;
+    } catch (e) {
+      _logger.severe('Error updating profile image: $e');
+      rethrow;
+    }
+  }
+  
+  /// Delete user profile image
+  Future<void> deleteProfileImage() async {
+    try {
+      if (_firebaseUser == null || _appUser?.profileImageUrl == null) {
+        throw Exception('No authenticated user or no profile image');
+      }
+      
+      // Delete image from Firebase Storage
+      await StorageService.instance.deleteProfileImage(_appUser!.profileImageUrl!);
+      
+      // Update profile image URL in Firestore
+      await updateUserProfile(profileImageUrl: null);
+      
+      _logger.info('Profile image deleted successfully');
+    } catch (e) {
+      _logger.severe('Error deleting profile image: $e');
       rethrow;
     }
   }

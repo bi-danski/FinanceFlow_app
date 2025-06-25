@@ -11,7 +11,7 @@ import '../services/realtime_data_service.dart';
 class LoanViewModel extends ChangeNotifier {
   final DatabaseService _databaseService = DatabaseService.instance;
   final FirestoreService _firestoreService = FirestoreService.instance;
-  final RealtimeDataService _realtimeDataService = RealtimeDataService.instance;
+  final RealtimeDataService _realtimeDataService = RealtimeDataService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   
   List<Loan> _loans = [];

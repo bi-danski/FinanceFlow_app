@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
-import '../../viewmodels/transaction_viewmodel.dart';
+import '../../viewmodels/transaction_viewmodel_fixed.dart';
 import '../../models/transaction_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../themes/app_theme.dart';
 import '../../constants/app_constants.dart';
 
@@ -50,7 +51,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       _descriptionController.text = widget.transaction!.description ?? '';
       _selectedDate = widget.transaction!.date;
       _selectedCategory = widget.transaction!.category;
-      _selectedPaymentMethod = widget.transaction!.paymentMethod ?? AppConstants.paymentMethods.first;
+      // _selectedPaymentMethod is not set from transaction since paymentMethod does not exist in the model.
       _isExpense = widget.transaction!.amount < 0;
     }
   }
@@ -99,22 +100,15 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
           date: _selectedDate,
           category: _selectedCategory,
           description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
-          paymentMethod: _selectedPaymentMethod,
+          userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+          type: _isExpense ? TransactionType.expense : TransactionType.income,
         );
         
-        final success = await transactionViewModel.addTransaction(transaction);
-        
-        if (success) {
-          if (mounted) {
-            Navigator.pop(context, true); // Return success
-          }
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Failed to save transaction')),
-            );
-          }
-        }
+        await transactionViewModel.addTransaction(transaction);
+
+if (mounted) {
+  Navigator.pop(context, true); // Return success
+}
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

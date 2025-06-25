@@ -3,9 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 import '../../viewmodels/budget_viewmodel.dart';
-import '../../models/budget_model.dart';
+
 import '../../widgets/app_navigation_drawer.dart';
 import '../../themes/app_theme.dart';
+import '../../services/navigation_service.dart';
 import 'budget_form_screen.dart';
 import 'widgets/budget_card.dart';
 
@@ -17,49 +18,51 @@ class BudgetsScreen extends StatefulWidget {
 }
 
 class _BudgetsScreenState extends State<BudgetsScreen> {
-  int _selectedIndex = 1; // Expenses tab selected (can be adjusted)
-  bool _isLoading = false;
+  int _selectedIndex = 1; 
+  late BudgetViewModel _budgetViewModel;
 
   @override
   void initState() {
     super.initState();
-    _loadBudgets();
-  }
-
-  Future<void> _loadBudgets() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final budgetViewModel = Provider.of<BudgetViewModel>(context, listen: false);
-      await budgetViewModel.loadBudgets();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading budgets: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
+    _budgetViewModel = Provider.of<BudgetViewModel>(context, listen: false);
+    _budgetViewModel.loadBudgets();
   }
 
   void _onItemSelected(int index) {
     setState(() {
       _selectedIndex = index;
     });
-    // Navigation would be handled here
+    // Map index to route
+    String? route;
+    switch (index) {
+      case 0: route = '/dashboard'; break;
+      case 1: route = '/expenses'; break;
+      case 2: route = '/enhanced-goals'; break;
+      case 3: route = '/reports'; break;
+      case 4: route = '/family'; break;
+      case 5: route = '/settings'; break;
+      case 6: route = '/income'; break;
+      case 7: route = '/budgets'; break;
+      case 8: route = '/loans'; break;
+      case 9: route = '/insights'; break;
+      case 10: route = '/spending-heatmap'; break;
+      case 11: route = '/spending-challenges'; break;
+      case 12: route = '/profile'; break;
+      default: route = '/dashboard';
+    }
+    // Always close the drawer
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+    // Only navigate if not already on the target route
+    final currentRoute = ModalRoute.of(context)?.settings.name;
+    if (currentRoute != route) {
+      NavigationService.navigateToReplacement(route);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final budgetViewModel = Provider.of<BudgetViewModel>(context);
-    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Budget Management'),
@@ -77,38 +80,43 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
         onItemSelected: _onItemSelected,
       ),
       body: RefreshIndicator(
-        onRefresh: _loadBudgets,
-        child: _isLoading
+        onRefresh: () => _budgetViewModel.loadBudgets(),
+        child: _budgetViewModel.isLoading
             ? const Center(child: CircularProgressIndicator())
-            : _buildContent(budgetViewModel),
+            : _buildContent(_budgetViewModel),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const BudgetFormScreen(),
-            ),
+      floatingActionButton: Builder(
+        builder: (localContext) {
+          return FloatingActionButton.extended(
+            onPressed: () async {
+              final result = await Navigator.push(
+                localContext,
+                MaterialPageRoute(
+                  builder: (context) => const BudgetFormScreen(),
+                ),
+              );
+              if (!localContext.mounted) return;
+              if (result == true) {
+                Provider.of<BudgetViewModel>(localContext, listen: false).loadBudgets();
+              }
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Add Budget'),
+            backgroundColor: AppTheme.accentColor,
+            foregroundColor: Colors.white,
           );
-          
-          if (result == true) {
-            // Refresh the list if a budget was added
-            _loadBudgets();
-          }
         },
-        icon: const Icon(Icons.add),
-        label: const Text('Add Budget'),
-        backgroundColor: AppTheme.accentColor,
-        foregroundColor: Colors.white,
       ),
     );
   }
 
   Widget _buildContent(BudgetViewModel viewModel) {
+    if (viewModel.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
     if (viewModel.budgets.isEmpty) {
       return _buildEmptyState();
     }
-    
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       child: Padding(
@@ -126,8 +134,21 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            // For demo purposes, we'll use mock data
-            ..._buildMockBudgetCards(),
+            // Display real budgets
+            ...viewModel.budgets.map((budget) => BudgetCard(
+              budget: budget,
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => BudgetFormScreen(budget: budget),
+                  ),
+                );
+                if (result == true || result == 'deleted') {
+                  viewModel.loadBudgets();
+                }
+              },
+            )),
           ],
         ),
       ),
@@ -169,10 +190,9 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                   builder: (context) => const BudgetFormScreen(),
                 ),
               );
-              
+              if (!mounted) return;
               if (result == true) {
-                // Refresh the list if a budget was added
-                _loadBudgets();
+                Provider.of<BudgetViewModel>(context, listen: false).loadBudgets();
               }
             },
             icon: const Icon(Icons.add),
@@ -286,66 +306,6 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
     );
   }
 
-  List<Widget> _buildMockBudgetCards() {
-    // Mock data for initial UI
-    final List<Map<String, dynamic>> mockBudgets = [
-      {
-        'category': 'Food',
-        'amount': 500.0,
-        'spent': 350.0,
-        'startDate': DateTime.now().subtract(const Duration(days: 15)),
-        'endDate': DateTime.now().add(const Duration(days: 15)),
-      },
-      {
-        'category': 'Transport',
-        'amount': 200.0,
-        'spent': 120.0,
-        'startDate': DateTime.now().subtract(const Duration(days: 15)),
-        'endDate': DateTime.now().add(const Duration(days: 15)),
-      },
-      {
-        'category': 'Entertainment',
-        'amount': 150.0,
-        'spent': 80.0,
-        'startDate': DateTime.now().subtract(const Duration(days: 15)),
-        'endDate': DateTime.now().add(const Duration(days: 15)),
-      },
-      {
-        'category': 'Shopping',
-        'amount': 300.0,
-        'spent': 250.0,
-        'startDate': DateTime.now().subtract(const Duration(days: 15)),
-        'endDate': DateTime.now().add(const Duration(days: 15)),
-      },
-    ];
-    
-    return mockBudgets.map((budgetData) {
-      final budget = Budget(
-        category: budgetData['category'],
-        amount: budgetData['amount'],
-        spent: budgetData['spent'],
-        startDate: budgetData['startDate'],
-        endDate: budgetData['endDate'],
-      );
-      
-      return BudgetCard(
-        budget: budget,
-        onTap: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => BudgetFormScreen(budget: budget),
-            ),
-          );
-          
-          if (result == true || result == 'deleted') {
-            // Refresh the list if a budget was updated or deleted
-            _loadBudgets();
-          }
-        },
-      );
-    }).toList();
-  }
 
   Color _getProgressColor(double percentage) {
     if (percentage < 50) {

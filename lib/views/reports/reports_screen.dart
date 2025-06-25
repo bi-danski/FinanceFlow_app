@@ -3,8 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-import '../../viewmodels/transaction_viewmodel.dart';
+import '../../viewmodels/transaction_viewmodel_fixed.dart';
 import '../../widgets/app_navigation_drawer.dart';
+import '../../services/navigation_service.dart';
 import '../../themes/app_theme.dart';
 import 'widgets/report_card.dart';
 import 'widgets/report_period_selector.dart';
@@ -23,26 +24,47 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
     final transactionViewModel = Provider.of<TransactionViewModel>(context, listen: false);
-    await transactionViewModel.loadTransactions();
+    transactionViewModel.loadTransactionsByMonth(DateTime.now());
   }
 
   void _onItemSelected(int index) {
     setState(() {
       _selectedIndex = index;
     });
-    // Navigation would be handled here
+    // Map index to route
+    String? route;
+    switch (index) {
+      case 0: route = '/dashboard'; break;
+      case 1: route = '/expenses'; break;
+      case 2: route = '/enhanced-goals'; break;
+      case 3: route = '/reports'; break;
+      case 4: route = '/family'; break;
+      case 5: route = '/settings'; break;
+      case 6: route = '/income'; break;
+      case 7: route = '/budgets'; break;
+      case 8: route = '/loans'; break;
+      case 9: route = '/insights'; break;
+      case 10: route = '/spending-heatmap'; break;
+      case 11: route = '/spending-challenges'; break;
+      case 12: route = '/profile'; break;
+      default: route = '/dashboard';
+    }
+    // Always close the drawer
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+    // Only navigate if not already on the target route
+    final currentRoute = ModalRoute.of(context)?.settings.name;
+    if (currentRoute != route) {
+      NavigationService.navigateToReplacement(route);
+    }
   }
 
   void _onPeriodChanged(String period) {
     setState(() {
       _selectedPeriod = period;
     });
-    _loadData();
   }
 
   @override

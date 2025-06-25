@@ -1,101 +1,103 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:logging/logging.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
 import 'firebase_options.dart';
 import 'services/connectivity_service.dart';
-import 'services/firebase_auth_service.dart';
-import 'services/realtime_data_service.dart';
-import 'viewmodels/transaction_viewmodel.dart';
-import 'viewmodels/budget_viewmodel.dart';
-import 'viewmodels/goal_viewmodel.dart';
-import 'viewmodels/family_viewmodel.dart';
-import 'viewmodels/income_viewmodel.dart';
-import 'viewmodels/loan_viewmodel.dart';
-import 'viewmodels/insights_viewmodel.dart';
 import 'themes/app_theme.dart';
 import 'constants/app_constants.dart';
 import 'services/navigation_service.dart';
 import 'services/auth_service.dart';
-import 'views/auth/sign_in_screen.dart';
-import 'views/auth/sign_up_screen.dart';
-import 'views/auth/forgot_password_screen.dart';
-import 'views/dashboard/dashboard_screen.dart';
-import 'views/onboarding/splash_screen.dart';
-import 'views/onboarding/onboarding_screen.dart';
-import 'views/insights/enhanced_insights_screen.dart';
-import 'views/budgets/enhanced_budget_management_screen.dart';
+// Screens
+import 'package:financeflow_app/views/auth/sign_in_screen.dart';
+import 'package:financeflow_app/views/dashboard/dashboard_screen.dart';
+import 'services/transaction_service.dart';
+
+// ViewModels
+import 'package:financeflow_app/viewmodels/transaction_viewmodel_fixed.dart' as fixed;
+import 'services/service_provider.dart';
+// Initialize logger
+final _logger = Logger('FinanceFlowApp');
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Configure sqflite factory based on platform
+  if (kIsWeb) {
+    // Use FFI web factory for web
+    databaseFactory = databaseFactoryFfiWeb;
+  } else {
+    // Initialize FFI for desktop platforms (or other non-web, non-mobile FFI targets)
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    // Note: For mobile, sqflite typically uses its own platform channels without needing this FFI setup.
+    // This 'else' block assumes you might be targeting desktop FFI.
+    // If only mobile and web, the 'else' might not be needed or sqfliteFfiInit() would be removed.
+  }
+
+  // Set up logging
+  Logger.root.level = Level.ALL;
+  Logger.root.onRecord.listen((record) {
+    debugPrint('${record.level.name}: ${record.time}: ${record.message}');
+  });
+
   // Initialize Firebase with the generated options
   try {
+    // Initialize Firebase
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    debugPrint('Firebase initialized successfully');
+    _logger.info('Firebase initialized successfully');
     
-    // Enable Firestore offline persistence
+    // Initialize Firestore settings
     FirebaseFirestore.instance.settings = const Settings(
       persistenceEnabled: true,
-      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
     );
-    debugPrint('Firestore offline persistence enabled');
+    _logger.info('Firestore settings configured');
     
-    // Initialize ConnectivityService for offline support
+    // Initialize connectivity service
     final connectivityService = ConnectivityService.instance;
     await connectivityService.initialize();
-    debugPrint('Connectivity service initialized');
+    _logger.info('Connectivity service initialized');
     
-    // Initialize Firebase Auth service
-    final firebaseAuthService = FirebaseAuthService.instance;
-    await firebaseAuthService.initialize();
-    debugPrint('Firebase Auth initialized successfully');
+    // Initialize authentication service
+    final authService = AuthService.instance;
+    await authService.initialize();
     
-    // Initialize the RealtimeDataService for real-time data updates
-    final realtimeDataService = RealtimeDataService.instance;
-    // Listen for auth state changes to start/stop streams
-    FirebaseAuth.instance.authStateChanges().listen((user) {
-      if (user != null) {
-        // User is signed in, start real-time data streams
-        realtimeDataService.initializeStreams();
-        debugPrint('Started real-time data streams for user: ${user.uid}');
-      } else {
-        // User is signed out, stop streams
-        realtimeDataService.dispose();
-        debugPrint('Stopped real-time data streams');
-      }
-    });
+    // Use the ServiceProvider to create and manage app services
+    _logger.info('Setting up service providers');
+    
+    // Create a single instance of TransactionViewModel
+    final transactionViewModel = fixed.TransactionViewModel();
+    
+    runApp(
+      MultiProvider(
+        providers: [
+          // Provide the TransactionService as a value
+          Provider.value(
+            value: TransactionService.instance,
+          ),
+          // Provide the TransactionViewModel as a value to ensure it's not recreated
+          ChangeNotifierProvider.value(
+            value: transactionViewModel,
+          ),
+          // Add other providers from ServiceProvider, passing the transactionViewModel to prevent duplicates
+          ...ServiceProvider.createProviders(transactionViewModel: transactionViewModel),
+        ],
+        child: const FinanceFlowApp(),
+      ),
+    );
   } catch (e) {
     debugPrint('Failed to initialize Firebase: $e');
     // Fallback to local authentication if Firebase fails
     debugPrint('Falling back to local authentication');
   }
-
-  // Initialize local auth service (temporary, will be removed in full migration)
-  final authService = AuthService.instance;
-  await authService.initialize();
-  
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider.value(value: authService),
-        // Add the RealtimeDataService for real-time data updates
-        ChangeNotifierProvider.value(value: RealtimeDataService.instance),
-        ChangeNotifierProvider(create: (_) => TransactionViewModel()),
-        ChangeNotifierProvider(create: (_) => BudgetViewModel()),
-        ChangeNotifierProvider(create: (_) => GoalViewModel()),
-        ChangeNotifierProvider(create: (_) => FamilyViewModel()),
-        ChangeNotifierProvider(create: (_) => IncomeViewModel()),
-        ChangeNotifierProvider(create: (_) => LoanViewModel()),
-        ChangeNotifierProvider(create: (_) => InsightsViewModel()),
-      ],
-      child: const FinanceFlowApp(),
-    ),
-  );
 }
 
 class FinanceFlowApp extends StatelessWidget {
@@ -103,23 +105,25 @@ class FinanceFlowApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context);
-    
+    // authService and firebaseAuthService will be accessed within the '/' route definition
     return MaterialApp(
       title: AppConstants.appName,
       theme: AppTheme.lightTheme,
       navigatorKey: NavigationService.navigatorKey,
-      home: authService.isAuthenticated ? const DashboardScreen() : const SplashScreen(),
-      routes: {
-        '/signin': (context) => const SignInScreen(),
-        '/signup': (context) => const SignUpScreen(),
-        '/forgot_password': (context) => const ForgotPasswordScreen(),
-        '/dashboard': (context) => const DashboardScreen(),
-        '/onboarding': (context) => const OnboardingScreen(),
-        '/enhanced_insights': (context) => const EnhancedInsightsScreen(),
-        '/enhanced_budget': (context) => const EnhancedBudgetManagementScreen(),
+      initialRoute: '/',
+      onGenerateRoute: (settings) {
+        if (settings.name == '/') {
+          final authService = Provider.of<AuthService>(context, listen: false);
+          final bool isAuthenticated = authService.isAuthenticated;
+          
+          return MaterialPageRoute(
+            builder: (context) => isAuthenticated 
+                ? const DashboardScreen() 
+                : const SignInScreen(),
+          );
+        }
+        return NavigationService.generateRoute(settings);
       },
-      onGenerateRoute: NavigationService.generateRoute,
       debugShowCheckedModeBanner: false,
     );
   }

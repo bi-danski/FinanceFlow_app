@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../viewmodels/family_viewmodel.dart';
+
 import '../../widgets/app_navigation_drawer.dart';
+import '../../services/navigation_service.dart';
 import '../../themes/app_theme.dart';
 import 'widgets/family_member_card.dart';
 import 'widgets/add_family_member_button.dart';
+import 'widgets/interactive_budget_chart.dart';
+import 'widgets/family_goals_tracker.dart';
+import 'widgets/family_spending_trends.dart';
+import 'widgets/family_member_comparison.dart';
 
 class FamilyScreen extends StatefulWidget {
   const FamilyScreen({super.key});
@@ -21,19 +28,41 @@ class _FamilyScreenState extends State<FamilyScreen> {
   @override
   void initState() {
     super.initState();
-    _loadFamilyMembers();
-  }
-
-  Future<void> _loadFamilyMembers() async {
     final familyViewModel = Provider.of<FamilyViewModel>(context, listen: false);
-    await familyViewModel.loadFamilyMembers();
+    familyViewModel.loadFamilyMembers();
   }
 
   void _onItemSelected(int index) {
     setState(() {
       _selectedIndex = index;
     });
-    // Navigation would be handled here
+    // Map index to route
+    String? route;
+    switch (index) {
+      case 0: route = '/dashboard'; break;
+      case 1: route = '/expenses'; break;
+      case 2: route = '/enhanced-goals'; break;
+      case 3: route = '/reports'; break;
+      case 4: route = '/family'; break;
+      case 5: route = '/settings'; break;
+      case 6: route = '/income'; break;
+      case 7: route = '/budgets'; break;
+      case 8: route = '/loans'; break;
+      case 9: route = '/insights'; break;
+      case 10: route = '/spending-heatmap'; break;
+      case 11: route = '/spending-challenges'; break;
+      case 12: route = '/profile'; break;
+      default: route = '/dashboard';
+    }
+    // Always close the drawer
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+    // Only navigate if not already on the target route
+    final currentRoute = ModalRoute.of(context)?.settings.name;
+    if (currentRoute != route) {
+      NavigationService.navigateToReplacement(route);
+    }
   }
 
   @override
@@ -44,6 +73,12 @@ class _FamilyScreenState extends State<FamilyScreen> {
       appBar: AppBar(
         title: const Text('Family Budget'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () {
+              // Show notifications
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
@@ -56,25 +91,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
         selectedIndex: _selectedIndex,
         onItemSelected: _onItemSelected,
       ),
-      body: RefreshIndicator(
-        onRefresh: _loadFamilyMembers,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildFamilySummaryCard(familyViewModel),
-                const SizedBox(height: 16),
-                _buildFamilyMembersList(familyViewModel),
-                const SizedBox(height: 16),
-                _buildFamilySpendingChart(),
-              ],
-            ),
-          ),
-        ),
-      ),
+      body: _buildContent(familyViewModel),
       floatingActionButton: AddFamilyMemberButton(
         onPressed: () {
           _showAddFamilyMemberDialog();
@@ -83,7 +100,83 @@ class _FamilyScreenState extends State<FamilyScreen> {
     );
   }
 
-  Widget _buildFamilySummaryCard(FamilyViewModel viewModel) {
+  Widget _buildContent(FamilyViewModel viewModel) {
+    if (viewModel.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (viewModel.familyMembers.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildFamilySummary(viewModel),
+            const SizedBox(height: 16),
+            _buildFamilyMemberList(viewModel.familyMembers),
+            const SizedBox(height: 24),
+            _buildInteractiveBudgetChart()
+              .animate()
+              .fadeIn(duration: const Duration(milliseconds: 500), delay: const Duration(milliseconds: 100))
+              .slideY(begin: 0.1, end: 0),
+            const SizedBox(height: 24),
+            const FamilySpendingTrends()
+              .animate()
+              .fadeIn(duration: const Duration(milliseconds: 600), delay: const Duration(milliseconds: 200))
+              .slideY(begin: 0.1, end: 0),
+            const SizedBox(height: 24),
+            const FamilyMemberComparison()
+              .animate()
+              .fadeIn(duration: const Duration(milliseconds: 700), delay: const Duration(milliseconds: 300))
+              .slideY(begin: 0.1, end: 0),
+            const SizedBox(height: 24),
+            const FamilyGoalsTracker()
+              .animate()
+              .fadeIn(duration: const Duration(milliseconds: 800), delay: const Duration(milliseconds: 400))
+              .slideY(begin: 0.1, end: 0),
+            const SizedBox(height: 40),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.people,
+            size: 64,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No family members added yet',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Add your first family member by tapping the + button',
+            style: TextStyle(
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFamilySummary(FamilyViewModel viewModel) {
     final currencyFormat = NumberFormat.currency(symbol: '\$');
     
     final totalBudget = viewModel.getTotalFamilyBudget();
@@ -182,133 +275,57 @@ class _FamilyScreenState extends State<FamilyScreen> {
     );
   }
 
-  Widget _buildFamilyMembersList(FamilyViewModel viewModel) {
-    if (viewModel.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+  Widget _buildFamilyMemberList(List<dynamic> familyMembers) {
+    String getProp(dynamic member, String key) {
+      if (member is Map) return member[key]?.toString() ?? '';
+      try {
+        final value = member.toJson()[key];
+        return value?.toString() ?? '';
+      } catch (_) {
+        try {
+          return member?.$key?.toString() ?? '';
+        } catch (_) {
+          return '';
+        }
+      }
     }
-    
-    if (viewModel.familyMembers.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.people,
-              size: 64,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'No family members added yet',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Add your first family member by tapping the + button',
-              style: TextStyle(
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
-      );
+    double getNumProp(dynamic member, String key) {
+      if (member is Map) return (member[key] ?? 0).toDouble();
+      try {
+        final value = member.toJson()[key];
+        return (value ?? 0).toDouble();
+      } catch (_) {
+        try {
+          return (member?.$key ?? 0).toDouble();
+        } catch (_) {
+          return 0.0;
+        }
+      }
     }
-    
-    // For demo purposes, we'll use mock data
-    final mockFamilyMembers = [
-      {
-        'name': 'John',
-        'budget': 1850.0,
-        'spent': 1350.0,
-        'avatarPath': null,
-      },
-      {
-        'name': 'Sarah',
-        'budget': 1650.0,
-        'spent': 850.0,
-        'avatarPath': null,
-      },
-      {
-        'name': 'Kids',
-        'budget': 550.0,
-        'spent': 350.0,
-        'avatarPath': null,
-      },
-    ];
-    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Family Members',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
-        ...mockFamilyMembers.map((member) => FamilyMemberCard(
-          name: member['name'] as String,
-          budget: member['budget'] as double,
-          spent: member['spent'] as double,
-          avatarPath: member['avatarPath'] as String?,
-          onTap: () {
-            // Navigate to family member details
-          },
+        ...familyMembers.map((member) => FamilyMemberCard(
+          name: getProp(member, 'name'),
+          budget: getNumProp(member, 'budget'),
+          spent: getNumProp(member, 'spent'),
+          avatarPath: getProp(member, 'avatarPath'),
+          onTap: () {},
           onAddExpense: () {
-            _showAddExpenseDialog(member['name'] as String);
+            _showAddExpenseDialog(getProp(member, 'name'));
           },
-        )).toList(),
+        )),
       ],
     );
   }
 
-  Widget _buildFamilySpendingChart() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Family Spending Breakdown',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 250,
-              child: Image.asset(
-                'assets/images/family_budget_chart.png',
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  height: 250,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'Family Spending Chart',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  Widget _buildInteractiveBudgetChart() {
+    return const InteractiveBudgetChart();
   }
 
   void _showAddFamilyMemberDialog() {

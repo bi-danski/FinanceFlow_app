@@ -92,19 +92,90 @@ class FirestoreService {
   
   // Transaction methods
   
+  /// Get a stream of transactions for the current user, filtered by month
+  Stream<List<app_models.Transaction>> transactionsStream({DateTime? month}) {
+    try {
+      if (_userId == null) throw Exception('No authenticated user');
+      
+      firestore.Query query = _transactionsCollection
+          .where('userId', isEqualTo: _userId);
+          
+      if (month != null) {
+        final startDate = DateTime(month.year, month.month, 1);
+        final endDate = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
+        
+        query = query
+            .where('date', isGreaterThanOrEqualTo: startDate)
+            .where('date', isLessThanOrEqualTo: endDate);
+      }
+      
+      return query
+          .orderBy('date', descending: true)
+          .snapshots()
+          .map((snapshot) => snapshot.docs
+              .map((doc) => app_models.Transaction.fromMap(
+                    doc.data() as Map<String, dynamic>..['id'] = doc.id,
+                  ))
+              .toList());
+    } catch (e) {
+      _logger.severe('Error in transactionsStream: $e');
+      rethrow;
+    }
+  }
+  
+  /// Get transactions for a specific month with pagination
+  /// [limit] is the maximum number of transactions to return (default: 50)
+  /// [lastDoc] is the last document from the previous page (for pagination)
+  Future<Map<String, dynamic>> getTransactionsByMonth(DateTime month, {int limit = 50, firestore.DocumentSnapshot? lastDoc}) async {
+    try {
+      if (_userId == null) throw Exception('No authenticated user');
+      
+      final startDate = DateTime(month.year, month.month, 1);
+      final endDate = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
+      
+      firestore.Query query = _transactionsCollection
+          .where('userId', isEqualTo: _userId)
+          .where('date', isGreaterThanOrEqualTo: startDate)
+          .where('date', isLessThanOrEqualTo: endDate)
+          .orderBy('date', descending: true)
+          .limit(limit);
+      
+      // Apply pagination if lastDoc is provided
+      if (lastDoc != null) {
+        query = query.startAfterDocument(lastDoc);
+      }
+      
+      final querySnapshot = await query.get();
+      
+      final transactions = querySnapshot.docs
+          .map((doc) => app_models.Transaction.fromMap(
+                doc.data() as Map<String, dynamic>..['id'] = doc.id,
+              ))
+          .toList();
+      
+      return {
+        'transactions': transactions,
+        'lastDoc': querySnapshot.docs.isNotEmpty ? querySnapshot.docs.last : null,
+      };
+    } catch (e) {
+      _logger.severe('Error getting transactions by month: $e');
+      rethrow;
+    }
+  }
+  
   /// Save a transaction to Firestore
   /// If the transaction has an ID, update it, otherwise create a new one
   Future<firestore.DocumentReference> saveTransaction(app_models.Transaction transaction) async {
     try {
       if (_userId == null) throw Exception('No authenticated user');
       
-      final transactionData = transaction.toMap();
+      final transactionData = transaction.toMap()..['userId'] = _userId;
       transactionData['userId'] = _userId;
       transactionData['updatedAt'] = firestore.FieldValue.serverTimestamp();
       
-      if (transaction.id != null && transaction.id! > 0) {
+      if (transaction.id != null && transaction.id!.isNotEmpty) {
         // Update existing transaction
-        final docRef = _transactionsCollection.doc(transaction.id.toString());
+        final docRef = _transactionsCollection.doc(transaction.id);
         await docRef.update(transactionData);
         _logger.info('Transaction updated: ${transaction.id}');
         return docRef;
@@ -143,32 +214,7 @@ class FirestoreService {
     }
   }
   
-  /// Get transactions for a specific month
-  Future<List<app_models.Transaction>> getTransactionsByMonth(int year, int month) async {
-    try {
-      if (_userId == null) return [];
-      
-      // Calculate start and end dates for the month
-      final startDate = DateTime(year, month, 1);
-      final endDate = DateTime(year, month + 1, 0);
-      
-      final querySnapshot = await _transactionsCollection
-          .where('userId', isEqualTo: _userId)
-          .where('date', isGreaterThanOrEqualTo: startDate.toIso8601String())
-          .where('date', isLessThanOrEqualTo: endDate.toIso8601String())
-          .orderBy('date', descending: true)
-          .get();
-      
-      return querySnapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        data['id'] = int.tryParse(doc.id) ?? 0;
-        return app_models.Transaction.fromMap(data);
-      }).toList();
-    } catch (e) {
-      _logger.severe('Error getting transactions by month: $e');
-      return [];
-    }
-  }
+
   
   /// Delete a transaction
   Future<void> deleteTransaction(String id) async {
@@ -179,6 +225,35 @@ class FirestoreService {
       _logger.info('Transaction deleted: $id');
     } catch (e) {
       _logger.severe('Error deleting transaction: $e');
+      rethrow;
+    }
+  }
+  
+  /// Add a new transaction
+  Future<void> addTransaction(app_models.Transaction transaction) async {
+    try {
+      if (_userId == null) throw Exception('No authenticated user');
+      
+      final transactionData = transaction.toMap()..remove('id'); // Remove ID to let Firestore auto-generate
+      await _transactionsCollection.add(transactionData);
+      _logger.info('Transaction added');
+    } catch (e) {
+      _logger.severe('Error adding transaction: $e');
+      rethrow;
+    }
+  }
+  
+  /// Update an existing transaction
+  Future<void> updateTransaction(app_models.Transaction transaction) async {
+    try {
+      if (_userId == null) throw Exception('No authenticated user');
+      if (transaction.id == null) throw Exception('Cannot update transaction without an ID');
+      
+      final transactionData = transaction.toMap()..remove('id'); // Remove ID to avoid updating it
+      await _transactionsCollection.doc(transaction.id).update(transactionData);
+      _logger.info('Transaction updated: ${transaction.id}');
+    } catch (e) {
+      _logger.severe('Error updating transaction: $e');
       rethrow;
     }
   }
@@ -257,7 +332,7 @@ class FirestoreService {
       goalData['userId'] = _userId;
       goalData['updatedAt'] = firestore.FieldValue.serverTimestamp();
       
-      if (goal.id != null && goal.id! > 0) {
+      if (goal.id != null && goal.id!.isNotEmpty) {
         // Update existing goal
         final docRef = _goalsCollection.doc(goal.id.toString());
         await docRef.update(goalData);

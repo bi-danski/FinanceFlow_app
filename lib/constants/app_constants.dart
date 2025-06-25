@@ -2,6 +2,7 @@ class AppConstants {
   // App information
   static const String appName = 'Finance Flow';
   static const String appVersion = '1.0.0';
+  static const String signInRoute = '/sign-in';
   
   // Navigation routes
   static const String dashboardRoute = '/dashboard';
@@ -13,6 +14,12 @@ class AppConstants {
   static const String incomeRoute = '/income';
   static const String loansRoute = '/loans';
   static const String insightsRoute = '/insights';
+  static const String profileRoute = '/profile';
+  static const String budgetsRoute = '/budgets';
+  static const String spendingHeatmapRoute = '/spending-heatmap';
+  static const String spendingChallengesRoute = '/spending-challenges';
+  static const String transactionDetailsRoute = '/transaction-details';
+  static const String scheduledPaymentsRoute = '/scheduled-payments';
   
   // Transaction categories
   static const List<String> expenseCategories = [

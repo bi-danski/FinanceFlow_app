@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 import '../../services/firebase_auth_service.dart';
 import '../../themes/app_theme.dart';
 import '../../models/user_model.dart' as app_models;
@@ -165,31 +164,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<FirebaseAuthService>(
-      builder: (context, authService, _) {
-        final user = authService.currentUser;
-        
-        if (user == null) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Profile'),
-            backgroundColor: AppTheme.primaryColor,
-            foregroundColor: Colors.white,
-            elevation: 0,
-          ),
-          body: SingleChildScrollView(
-            child: Column(
-              children: [
-                _buildProfileHeader(user),
-                _buildProfileForm(user),
-              ],
-            ),
-          ),
-        );
-      },
+    // Access FirebaseAuthService directly instead of using Consumer
+    final authService = FirebaseAuthService.instance;
+    final user = authService.currentUser;
+    
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Profile'),
+        backgroundColor: AppTheme.primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildProfileHeader(user),
+            _buildProfileForm(user),
+          ],
+        ),
+      ),
     );
   }
 

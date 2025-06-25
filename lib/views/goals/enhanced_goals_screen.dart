@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/enhanced_goal_model.dart';
 import '../../widgets/app_navigation_drawer.dart';
+import '../../services/navigation_service.dart';
 
 class EnhancedGoalsScreen extends StatefulWidget {
   const EnhancedGoalsScreen({super.key});
@@ -138,6 +139,33 @@ class _EnhancedGoalsScreenState extends State<EnhancedGoalsScreen> with SingleTi
     setState(() {
       _selectedIndex = index;
     });
+    // Map index to route
+    String? route;
+    switch (index) {
+      case 0: route = '/dashboard'; break;
+      case 1: route = '/expenses'; break;
+      case 2: route = '/enhanced-goals'; break;
+      case 3: route = '/reports'; break;
+      case 4: route = '/family'; break;
+      case 5: route = '/settings'; break;
+      case 6: route = '/income'; break;
+      case 7: route = '/budgets'; break;
+      case 8: route = '/loans'; break;
+      case 9: route = '/insights'; break;
+      case 10: route = '/spending-heatmap'; break;
+      case 11: route = '/spending-challenges'; break;
+      case 12: route = '/profile'; break;
+      default: route = '/dashboard';
+    }
+    // Always close the drawer
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+    // Only navigate if not already on the target route
+    final currentRoute = ModalRoute.of(context)?.settings.name;
+    if (currentRoute != route) {
+      NavigationService.navigateToReplacement(route);
+    }
   }
 
   @override

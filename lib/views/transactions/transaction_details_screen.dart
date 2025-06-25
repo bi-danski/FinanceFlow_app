@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/transaction_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../themes/app_theme.dart';
 import '../../constants/app_constants.dart';
 import 'transaction_form_screen.dart';
@@ -180,15 +181,7 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
               widget.transaction.category,
               _getCategoryColor(widget.transaction.category),
             ),
-            if (widget.transaction.paymentMethod != null) ...[
-              const Divider(),
-              _buildDetailRow(
-                context,
-                'Payment Method',
-                widget.transaction.paymentMethod!,
-                null,
-              ),
-            ],
+            
           ],
         ),
       ),
@@ -410,7 +403,8 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
       date: DateTime.now(), // Use current date for the duplicate
       category: widget.transaction.category,
       description: widget.transaction.description,
-      paymentMethod: widget.transaction.paymentMethod,
+      userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+      type: widget.transaction.type,
     );
     
     Navigator.push(

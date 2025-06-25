@@ -4,6 +4,78 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../themes/app_theme.dart';
 import '../utils/enhanced_animations.dart';
 
+/// Static utility class for creating animated buttons easily
+class AnimatedButtons {
+  /// Creates a primary button with animation
+  static Widget primaryButton({
+    required String label,
+    required VoidCallback onPressed,
+    IconData? icon,
+    Color? color,
+    bool isLoading = false,
+    bool fullWidth = true,
+  }) {
+    return AnimatedPrimaryButton(
+      text: label,
+      onPressed: onPressed,
+      icon: icon,
+      color: color,
+      isLoading: isLoading,
+      fullWidth: fullWidth,
+    );
+  }
+  
+  /// Creates a secondary button with animation
+  static Widget secondaryButton({
+    required String label,
+    required VoidCallback onPressed,
+    IconData? icon,
+    Color? color,
+    bool isLoading = false,
+    bool fullWidth = true,
+  }) {
+    return AnimatedPrimaryButton(
+      text: label,
+      onPressed: onPressed,
+      icon: icon,
+      color: color ?? Colors.grey.shade200,
+      isLoading: isLoading,
+      fullWidth: fullWidth,
+      elevated: false,
+    );
+  }
+  
+  /// Creates a text button with animation
+  static Widget textButton({
+    required String text,
+    required VoidCallback onPressed,
+    Color? color,
+    bool underlined = false,
+  }) {
+    return AnimatedTextButton(
+      text: text,
+      onPressed: onPressed,
+      color: color,
+      underlined: underlined,
+    );
+  }
+  
+  /// Creates a floating action button with animation
+  static Widget floatingActionButton({
+    required VoidCallback onPressed,
+    required IconData icon,
+    String? tooltip,
+    Color? backgroundColor,
+  }) {
+    return AnimatedFloatingActionButton(
+      onPressed: onPressed,
+      icon: icon,
+      tooltip: tooltip,
+      backgroundColor: backgroundColor,
+    );
+  }
+}
+
 /// A collection of animated buttons for the FinanceFlow app
 /// These buttons provide visual feedback and modern interactions
 
@@ -152,6 +224,7 @@ class AnimatedFloatingActionButton extends StatefulWidget {
   final IconData icon;
   final VoidCallback onPressed;
   final Color? color;
+  final Color? backgroundColor;
   final String? tooltip;
   final bool mini;
   final bool extendedAnimation;
@@ -161,6 +234,7 @@ class AnimatedFloatingActionButton extends StatefulWidget {
     required this.icon,
     required this.onPressed,
     this.color,
+    this.backgroundColor,
     this.tooltip,
     this.mini = false,
     this.extendedAnimation = true,
@@ -367,8 +441,103 @@ class AnimatedToggleButton extends StatelessWidget {
   }
 }
 
+/// An animated text button with subtle hover and tap effects
+class AnimatedTextButton extends StatefulWidget {
+  final String text;
+  final VoidCallback onPressed;
+  final Color? color;
+  final bool underlined;
+
+  const AnimatedTextButton({
+    super.key,
+    required this.text,
+    required this.onPressed,
+    this.color,
+    this.underlined = false,
+  });
+
+  @override
+  State<AnimatedTextButton> createState() => _AnimatedTextButtonState();
+}
+
+class _AnimatedTextButtonState extends State<AnimatedTextButton> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  bool _isHovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primaryColor = widget.color ?? theme.colorScheme.primary;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() {
+        _isHovered = true;
+        _controller.forward();
+      }),
+      onExit: (_) => setState(() {
+        _isHovered = false;
+        _controller.reverse();
+      }),
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          widget.onPressed();
+        },
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+              child: Text(
+                widget.text,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: primaryColor,
+                  decoration: widget.underlined || _isHovered
+                      ? TextDecoration.underline
+                      : TextDecoration.none,
+                  fontWeight: _isHovered ? FontWeight.bold : FontWeight.normal,
+                ),
+              ).animate(
+                controller: _controller,
+                effects: [
+                  ScaleEffect(
+                    begin: const Offset(1.0, 1.0),
+                    end: const Offset(1.05, 1.05),
+                    curve: Curves.easeOut,
+                  ),
+                  ShimmerEffect(
+                    color: primaryColor.withValues(alpha: 0.2),
+                    delay: 50.ms,
+                    duration: 700.ms,
+                    curve: Curves.easeInOut,
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
 /// A segmented control button with animated transitions
-class AnimatedSegmentedControl extends StatelessWidget {
+class AnimatedSegmentedControl<T> extends StatelessWidget {
   final List<String> segments;
   final int selectedIndex;
   final ValueChanged<int> onSegmentTapped;

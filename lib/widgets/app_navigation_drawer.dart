@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import '../constants/app_constants.dart';
@@ -184,6 +185,13 @@ class AppNavigationDrawer extends StatelessWidget {
             icon: FontAwesomeIcons.users,
             route: AppConstants.familyRoute,
           ),
+          _buildNavItem(
+            context,
+            index: 12,
+            title: 'Profile',
+            icon: FontAwesomeIcons.circleUser,
+            route: AppConstants.profileRoute,
+          ),
           const Divider(height: 1),
           _buildNavItem(
             context,
@@ -244,10 +252,6 @@ class AppNavigationDrawer extends StatelessWidget {
       selected: isSelected,
       onTap: () {
         onItemSelected(index);
-        Navigator.pop(context);
-        if (route.isNotEmpty) {
-          Navigator.pushReplacementNamed(context, route);
-        }
       },
     );
   }

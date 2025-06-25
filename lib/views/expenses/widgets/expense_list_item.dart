@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../themes/app_theme.dart';
-import '../../../models/transaction_model.dart';
+import '../../../models/transaction_model.dart' as models;
 import '../../../views/transactions/transaction_details_screen.dart';
 
 class ExpenseListItem extends StatelessWidget {
@@ -25,11 +25,15 @@ class ExpenseListItem extends StatelessWidget {
     final dateFormat = DateFormat('MMM dd');
     
     // Create a Transaction object from the provided data
-    final transaction = Transaction(
+    final transaction = models.Transaction(
       title: title,
       amount: -amount, // Make it negative for expense
       date: date,
       category: category,
+      id: '',
+      type: models.TransactionType.expense,
+      status: models.TransactionStatus.completed,
+      userId: '',
     );
     
     return Card(

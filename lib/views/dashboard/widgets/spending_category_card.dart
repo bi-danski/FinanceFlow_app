@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-import '../../../viewmodels/transaction_viewmodel.dart';
+import '../../../viewmodels/transaction_viewmodel_fixed.dart';
 import '../../../themes/app_theme.dart';
 
 class SpendingCategoryCard extends StatelessWidget {

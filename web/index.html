@@ -31,6 +31,29 @@
 
   <title>financeflow_app</title>
   <link rel="manifest" href="manifest.json">
+  <!-- Firebase SDK (Compat version for Flutter compatibility) -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-analytics-compat.js"></script>
+
+  <!-- Initialize Firebase -->
+  <script>
+    var firebaseConfig = {
+      apiKey: "AIzaSyDummyKey123456789",
+      authDomain: "financeflow-demo.firebaseapp.com",
+      projectId: "financeflow-demo",
+      storageBucket: "financeflow-demo.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abcdef123456",
+      measurementId: "G-DUMMY123456"
+    };
+
+    // Initialize Firebase with the compatibility version
+    // This is needed for Flutter Firebase plugins compatibility
+    firebase.initializeApp(firebaseConfig);
+    firebase.analytics();
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

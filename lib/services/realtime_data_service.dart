@@ -13,15 +13,30 @@ import '../models/loan_model.dart';
 /// Real-time data service for FinanceFlow app
 /// Provides streams of data from Firestore for real-time updates
 class RealtimeDataService extends ChangeNotifier {
-  // Singleton pattern
-  static final RealtimeDataService _instance = RealtimeDataService._internal();
-  static RealtimeDataService get instance => _instance;
-  factory RealtimeDataService() => _instance;
-  RealtimeDataService._internal();
+  // Use a factory pattern that doesn't rely on a singleton
+  // This avoids the issues with disposal and recreation
+  factory RealtimeDataService() {
+    return RealtimeDataService._create();
+  }
+  
+  // Private constructor for creating new instances
+  RealtimeDataService._create() {
+    _isDisposed = false;
+    _logger.info('Created new RealtimeDataService instance');
+    _setupAuthListener();
+  }
 
-  final _logger = Logger('RealtimeDataService');
+  // Static logger to ensure consistent naming
+  static final _logger = Logger('RealtimeDataService');
+  
+  // Service dependencies
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  
+  // Track disposal state to prevent errors
+  bool _isDisposed = false;
+  bool _isInitialized = false;
+  StreamSubscription? _authSubscription;
   
   // Stream controllers
   final StreamController<List<app_models.Transaction>> _transactionsController = 
@@ -56,8 +71,41 @@ class RealtimeDataService extends ChangeNotifier {
   CollectionReference get _incomeSourcesCollection => _db.collection('income_sources');
   CollectionReference get _loansCollection => _db.collection('loans');
   
+  /// Setup authentication state listener
+  void _setupAuthListener() {
+    _logger.info('Setting up auth state listener');
+    
+    // Cancel any existing subscription
+    _authSubscription?.cancel();
+    
+    // Listen for auth state changes
+    _authSubscription = _auth.authStateChanges().listen((User? user) {
+      if (_isDisposed) return;
+      
+      if (user != null) {
+        _logger.info('User authenticated: ${user.uid}');
+        initializeStreams();
+      } else {
+        _logger.info('User signed out');
+        _cancelAllSubscriptions();
+      }
+    }, onError: (error) {
+      _logger.severe('Auth state listener error: $error');
+    });
+  }
+  
   /// Initialize all data streams
   void initializeStreams() {
+    if (_isDisposed) {
+      _logger.warning('Attempted to initialize streams on disposed service');
+      return;
+    }
+    
+    if (_isInitialized) {
+      _logger.info('Streams already initialized, skipping');
+      return;
+    }
+    
     final userId = _auth.currentUser?.uid;
     if (userId == null) {
       _logger.warning('Cannot initialize streams: No authenticated user');
@@ -65,6 +113,7 @@ class RealtimeDataService extends ChangeNotifier {
     }
     
     _logger.info('Initializing real-time data streams for user: $userId');
+    _isInitialized = true;
     
     // Start all streams
     startTransactionsStream();
@@ -246,10 +295,9 @@ class RealtimeDataService extends ChangeNotifier {
         });
   }
   
-  /// Stop all streams and clean up resources
-  @override
-  void dispose() {
-    _logger.info('Disposing real-time data service');
+  /// Cancel all stream subscriptions but keep controllers open
+  void _cancelAllSubscriptions() {
+    _logger.info('Cancelling all subscriptions');
     
     // Cancel all subscriptions
     _transactionsSubscription?.cancel();
@@ -258,29 +306,58 @@ class RealtimeDataService extends ChangeNotifier {
     _incomeSourcesSubscription?.cancel();
     _loansSubscription?.cancel();
     
-    // Close all controllers
-    _transactionsController.close();
-    _budgetsController.close();
-    _goalsController.close();
-    _incomeSourcesController.close();
-    _loansController.close();
+    // Reset state
+    _isInitialized = false;
+  }
+  
+  /// Stop all streams and clean up resources
+  @override
+  void dispose() {
+    // Prevent multiple disposals
+    if (_isDisposed) {
+      _logger.warning('Attempted to dispose already disposed RealtimeDataService');
+      return;
+    }
+    
+    _logger.info('Disposing real-time data service');
+    _isDisposed = true;
+    
+    // Cancel auth listener
+    _authSubscription?.cancel();
+    
+    // Cancel all data subscriptions
+    _cancelAllSubscriptions();
+    
+    // Close all controllers if they're not closed already
+    try {
+      if (!_transactionsController.isClosed) _transactionsController.close();
+      if (!_budgetsController.isClosed) _budgetsController.close();
+      if (!_goalsController.isClosed) _goalsController.close();
+      if (!_incomeSourcesController.isClosed) _incomeSourcesController.close();
+      if (!_loansController.isClosed) _loansController.close();
+    } catch (e) {
+      _logger.severe('Error closing stream controllers: $e');
+    }
     
     // Call super.dispose() as required
     super.dispose();
   }
   
-  /// Restart all streams (useful after authentication changes)
+  /// Restart all streams (useful after manual reconnection)
   void restartStreams() {
+    // Don't restart if disposed
+    if (_isDisposed) {
+      _logger.warning('Attempted to restart streams on disposed RealtimeDataService');
+      return;
+    }
+    
     _logger.info('Restarting all data streams');
     
     // Cancel all existing subscriptions
-    _transactionsSubscription?.cancel();
-    _budgetsSubscription?.cancel();
-    _goalsSubscription?.cancel();
-    _incomeSourcesSubscription?.cancel();
-    _loansSubscription?.cancel();
+    _cancelAllSubscriptions();
     
     // Start all streams again
+    _isInitialized = false;
     initializeStreams();
   }
 }

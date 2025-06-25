@@ -83,9 +83,9 @@ class FirestoreService {
       transactionData['userId'] = _userId;
       transactionData['updatedAt'] = firestore.FieldValue.serverTimestamp();
       
-      if (transaction.id != null && transaction.id! > 0) {
+      if (transaction.id != null && transaction.id!.isNotEmpty) {
         // Update existing transaction
-        final docRef = _transactionsCollection.doc(transaction.id.toString());
+        final docRef = _transactionsCollection.doc(transaction.id);
         await docRef.update(transactionData);
         _logger.info('Transaction updated: ${transaction.id}');
         return docRef;
@@ -238,7 +238,7 @@ class FirestoreService {
       goalData['userId'] = _userId;
       goalData['updatedAt'] = firestore.FieldValue.serverTimestamp();
       
-      if (goal.id != null && goal.id! > 0) {
+      if (goal.id != null && goal.id!.isNotEmpty) {
         // Update existing goal
         final docRef = _goalsCollection.doc(goal.id.toString());
         await docRef.update(goalData);

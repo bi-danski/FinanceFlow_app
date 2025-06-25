@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../themes/app_theme.dart';
-import '../../../models/transaction_model.dart';
+import '../../../models/transaction_model.dart' as models;
 import '../../../views/transactions/transaction_details_screen.dart';
 
 class RecentTransactionsCard extends StatelessWidget {
@@ -145,11 +145,11 @@ class RecentTransactionsCard extends StatelessWidget {
     final amountPrefix = isExpense ? '' : '+';
     
     // Create a Transaction object from the mock data
-    final transactionObj = Transaction(
+    final transactionObj = models.Transaction(
       title: transaction['title'],
       amount: transaction['amount'],
       date: transaction['date'],
-      category: transaction['category'],
+      category: transaction['category'], userId: '', type: transaction['amount'] < 0 ? models.TransactionType.expense : models.TransactionType.income,
     );
     
     return InkWell(

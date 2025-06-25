@@ -6,28 +6,34 @@ import '../themes/app_theme.dart';
 /// An animated transaction list item with modern UI effects
 class AnimatedTransactionItem extends StatelessWidget {
   final String title;
+  final String? subtitle;
   final String date;
   final String amount;
   final IconData icon;
-  final Color color;
-  final bool isExpense;
+  final Color? color;
+  final bool? isExpense;
   final VoidCallback? onTap;
   final int index;
 
   const AnimatedTransactionItem({
     super.key, 
     required this.title,
+    this.subtitle,
     required this.date,
     required this.amount,
     required this.icon,
-    required this.color,
-    required this.isExpense,
+    this.color,
+    this.isExpense,
     this.onTap,
     this.index = 0,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Default color if not provided
+    final itemColor = color ?? Theme.of(context).primaryColor;
+    final isExpenseValue = isExpense ?? (amount.startsWith('-'));
+    
     final itemContent = Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -35,7 +41,7 @@ class AnimatedTransactionItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.05),
+            color: itemColor.withValues(alpha: 13), // 0.05 * 255 ≈ 13
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -46,20 +52,20 @@ class AnimatedTransactionItem extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
-          splashColor: color.withValues(alpha: 0.1),
-          highlightColor: color.withValues(alpha: 0.05),
+          splashColor: itemColor.withValues(alpha: 26), // 0.1 * 255 ≈ 26
+          highlightColor: itemColor.withValues(alpha: 13), // 0.05 * 255 ≈ 13
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
                 // Transaction icon with background
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
+                    color: itemColor.withValues(alpha: 26), // 0.1 * 255 ≈ 26
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: color, size: 20),
+                  child: Icon(icon, color: itemColor, size: 20),
                 ),
                 const SizedBox(width: 16),
                 // Transaction details
@@ -91,7 +97,7 @@ class AnimatedTransactionItem extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: isExpense ? Colors.red.shade700 : Colors.green.shade700,
+                    color: isExpenseValue ? Colors.red.shade700 : Colors.green.shade700,
                   ),
                 ),
               ],

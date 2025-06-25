@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../widgets/app_navigation_drawer.dart';
+import '../../services/navigation_service.dart';
 import '../../themes/app_theme.dart';
 import '../../constants/app_constants.dart';
 import 'widgets/settings_section.dart';
 import 'widgets/settings_item.dart';
+import 'data_migration_screen.dart';
+import '../../services/database_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -18,6 +22,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int _selectedIndex = 5; // Settings tab selected
   bool _notificationsEnabled = true;
   bool _darkModeEnabled = false;
+  bool _useMockData = false;
   String _currency = 'USD';
   String _language = 'English';
 
@@ -34,6 +39,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _darkModeEnabled = prefs.getBool('dark_mode_enabled') ?? false;
       _currency = prefs.getString('currency') ?? 'USD';
       _language = prefs.getString('language') ?? 'English';
+      _useMockData = prefs.getBool('use_mock_data') ?? false;
     });
   }
 
@@ -41,6 +47,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('notifications_enabled', _notificationsEnabled);
     await prefs.setBool('dark_mode_enabled', _darkModeEnabled);
+    await prefs.setBool('use_mock_data', _useMockData);
     await prefs.setString('currency', _currency);
     await prefs.setString('language', _language);
   }
@@ -49,7 +56,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _selectedIndex = index;
     });
-    // Navigation would be handled here
+    // Map index to route
+    String? route;
+    switch (index) {
+      case 0: route = '/dashboard'; break;
+      case 1: route = '/expenses'; break;
+      case 2: route = '/enhanced-goals'; break;
+      case 3: route = '/reports'; break;
+      case 4: route = '/family'; break;
+      case 5: route = '/settings'; break;
+      case 6: route = '/income'; break;
+      case 7: route = '/budgets'; break;
+      case 8: route = '/loans'; break;
+      case 9: route = '/insights'; break;
+      case 10: route = '/spending-heatmap'; break;
+      case 11: route = '/spending-challenges'; break;
+      case 12: route = '/profile'; break;
+      default: route = '/dashboard';
+    }
+    // Always close the drawer
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+    // Only navigate if not already on the target route
+    final currentRoute = ModalRoute.of(context)?.settings.name;
+    if (currentRoute != route) {
+      NavigationService.navigateToReplacement(route);
+    }
   }
 
   @override
@@ -126,31 +159,89 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _saveSettings();
                 },
               ),
+              SettingsItem(
+                icon: Icons.developer_mode,
+                title: 'Use Mock Data',
+                subtitle: 'Enable for demo/testing',
+                trailing: Switch(
+                  value: _useMockData,
+                  onChanged: (value) {
+                    setState(() {
+                      _useMockData = value;
+                    });
+                    _saveSettings();
+                    DatabaseService.instance.useMockData = value;
+                  },
+                  activeColor: AppTheme.primaryColor,
+                ),
+                onTap: () {
+                  setState(() {
+                    _useMockData = !_useMockData;
+                  });
+                  _saveSettings();
+                  DatabaseService.instance.useMockData = _useMockData;
+                },
+              ),
             ],
           ),
           const SizedBox(height: 16),
           SettingsSection(
-            title: 'Data Management',
+            title: 'Data & Privacy',
             children: [
+              SettingsItem(
+                icon: Icons.cloud_upload,
+                title: 'Migrate to Cloud',
+                subtitle: 'Transfer data to Firebase',
+                onTap: () {
+                  // Check if user is authenticated with Firebase
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const DataMigrationScreen(),
+                      ),
+                    );
+                  } else {
+                    // Show dialog to sign in first
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Sign In Required'),
+                        content: const Text(
+                          'You need to sign in with Firebase to migrate your data to the cloud.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                },
+              ),
               SettingsItem(
                 icon: Icons.backup,
                 title: 'Backup Data',
                 subtitle: 'Last backup: Never',
                 onTap: () {
-                  // Handle backup
+                  // Backup data
                 },
               ),
               SettingsItem(
                 icon: Icons.restore,
                 title: 'Restore Data',
+                subtitle: 'Restore from backup',
                 onTap: () {
-                  // Handle restore
+                  // Restore data
                 },
               ),
               SettingsItem(
                 icon: Icons.delete_forever,
                 title: 'Clear All Data',
-                subtitle: 'This action cannot be undone',
+                subtitle: 'Delete all your data',
                 onTap: () {
                   _showClearDataDialog();
                 },

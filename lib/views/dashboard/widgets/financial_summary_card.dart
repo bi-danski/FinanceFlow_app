@@ -1,21 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 
-import '../../../viewmodels/transaction_viewmodel.dart';
 import '../../../themes/app_theme.dart';
 
 class FinancialSummaryCard extends StatelessWidget {
-  const FinancialSummaryCard({super.key});
+  final double income;
+  final double expenses;
+  final double balance;
+  final Map<String, double> categoryTotals;
+  final bool isRefreshing;
+  
+  const FinancialSummaryCard({
+    super.key,
+    required this.income,
+    required this.expenses,
+    required this.balance,
+    required this.categoryTotals,
+    this.isRefreshing = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final transactionViewModel = Provider.of<TransactionViewModel>(context);
-    
-    final income = transactionViewModel.getTotalIncome();
-    final expenses = transactionViewModel.getTotalExpenses();
-    final balance = transactionViewModel.getBalance();
+    // Using real-time data passed from parent instead of ViewModel
 
     return Card(
       child: Padding(

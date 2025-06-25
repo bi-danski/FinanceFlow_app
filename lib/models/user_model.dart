@@ -6,6 +6,7 @@ class User {
   final DateTime createdAt;
   final DateTime? lastLogin;
   final Map<String, dynamic>? preferences;
+  final String? profileImageUrl;
 
   User({
     required this.id,
@@ -14,6 +15,7 @@ class User {
     required this.createdAt,
     this.lastLogin,
     this.preferences,
+    this.profileImageUrl,
   });
 
   /// Convert User to a Map
@@ -25,6 +27,7 @@ class User {
       'created_at': createdAt.toIso8601String(),
       'last_login': lastLogin?.toIso8601String(),
       'preferences': preferences,
+      'profile_image_url': profileImageUrl,
     };
   }
 
@@ -37,6 +40,7 @@ class User {
       createdAt: DateTime.parse(map['created_at']),
       lastLogin: map['last_login'] != null ? DateTime.parse(map['last_login']) : null,
       preferences: map['preferences'],
+      profileImageUrl: map['profile_image_url'],
     );
   }
 
@@ -48,6 +52,7 @@ class User {
     DateTime? createdAt,
     DateTime? lastLogin,
     Map<String, dynamic>? preferences,
+    String? profileImageUrl,
   }) {
     return User(
       id: id ?? this.id,
@@ -56,6 +61,7 @@ class User {
       createdAt: createdAt ?? this.createdAt,
       lastLogin: lastLogin ?? this.lastLogin,
       preferences: preferences ?? this.preferences,
+      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
     );
   }
 }

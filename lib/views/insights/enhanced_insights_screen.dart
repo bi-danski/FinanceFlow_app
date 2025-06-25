@@ -375,7 +375,7 @@ class _EnhancedInsightsScreenState extends State<EnhancedInsightsScreen> with Si
                   children: [
                     Text(
                       insight.description,
-                      style: const TextStyle(fontSize: 16, height: 1.5),
+                      style: TextStyle(fontSize: 16, height: 1.5),
                     ),
                     const SizedBox(height: 16),
                     const Divider(),
@@ -805,3 +805,4 @@ class _EnhancedInsightsScreenState extends State<EnhancedInsightsScreen> with Si
     );
   }
 }
+

@@ -43,12 +43,17 @@ class _AnimatedTransactionCardState extends State<AnimatedTransactionCard> {
         ? '-\$${amount.abs().toStringAsFixed(2)}' 
         : '\$${amount.toStringAsFixed(2)}';
     
-    // Determine status color
-    final statusColor = widget.transaction.status == 'Paid' 
+    // Determine status color and text
+    final statusText = widget.transaction.status.toString().split('.').last;
+    final statusColor = widget.transaction.status == TransactionStatus.completed
         ? Colors.green 
-        : widget.transaction.status == 'Partial' 
+        : widget.transaction.status == TransactionStatus.partial
             ? Colors.orange 
-            : Colors.red;
+            : widget.transaction.status == TransactionStatus.pending
+                ? Colors.blue
+                : widget.transaction.status == TransactionStatus.failed
+                    ? Colors.red
+                    : Colors.grey;
 
     // We'll add isRecurring property to the Transaction model later
 
@@ -133,7 +138,7 @@ class _AnimatedTransactionCardState extends State<AnimatedTransactionCard> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          widget.transaction.status,
+statusText,
                           style: TextStyle(
                             color: statusColor,
                             fontSize: 12,

@@ -1,12 +1,15 @@
+// ignore_for_file: unused_element
+
 import 'dart:math';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
-import '../models/transaction_model.dart' as app_models; // Use alias to match database_service.dart
+// Use alias to match database_service.dart
 import '../models/budget_model.dart';
 import '../models/goal_model.dart';
 import '../models/insight_model.dart';
 import '../models/income_source_model.dart';
 import '../models/loan_model.dart';
+import '../models/transaction_model.dart' as app_models;
 import '../constants/app_constants.dart';
 import 'database_service.dart';
 
@@ -92,13 +95,13 @@ class InsightsService {
   }
 
   // Generate spending pattern insights
-  Future<List<Insight>> _generateSpendingPatternInsights(List<app_models.Transaction> transactions) async {
+  Future<List<Insight>> _generateSpendingPatternInsights(List<app_models.TransactionModel> transactions) async {
     List<Insight> insights = [];
     
     if (transactions.isEmpty) return insights;
     
     // Group transactions by category
-    Map<String, List<app_models.Transaction>> categorizedTransactions = {};
+    Map<String, List<app_models.TransactionModel>> categorizedTransactions = {};
     for (var transaction in transactions) {
       if (transaction.amount < 0) { // Only consider expenses
         final category = transaction.category;
@@ -125,24 +128,31 @@ class InsightsService {
           .where((t) => t.date.isAfter(previousMonthStart) && t.date.isBefore(currentMonthStart))
           .fold(0, (sum, t) => sum + t.amount);
       
-      // Calculate percentage change
-      double percentageChange = ((currentMonthTotal - previousMonthTotal) / previousMonthTotal) * 100;
-      
-      // Only create insight if change is significant (more than 20%)
-      if (percentageChange.abs() >= 20) {
-        final insight = SpendingPatternInsight(
-          title: '${percentageChange > 0 ? 'Increased' : 'Decreased'} spending on $category',
-          description: 'Your spending on $category has ${percentageChange > 0 ? 'increased' : 'decreased'} by ${percentageChange.abs().toStringAsFixed(1)}% compared to last month.',
-          date: DateTime.now(),
-          category: category,
-          percentageChange: percentageChange,
-          previousAmount: previousMonthTotal,
-          currentAmount: currentMonthTotal,
-          timeFrame: 'month',
-          relevanceScore: min(1.0, percentageChange.abs() / 100),
-        );
+      // Only create insight if we have previous month data
+      if (previousMonthTotal != 0) {
+        // Calculate percentage change
+        double percentageChange = ((currentMonthTotal - previousMonthTotal) / previousMonthTotal) * 100;
         
-        insights.add(insight);
+        // Only create insight if change is significant (more than 20%)
+        if (percentageChange.abs() >= 20) {
+          final insight = Insight(
+            id: DateTime.now().millisecondsSinceEpoch + category.hashCode,
+            title: '${percentageChange > 0 ? 'Increased' : 'Decreased'} spending on $category',
+            description: 'Your spending on $category has ${percentageChange > 0 ? 'increased' : 'decreased'} by ${percentageChange.abs().toStringAsFixed(1)}% compared to last month.',
+            type: percentageChange > 0 ? 'warning' : 'positive',
+            date: DateTime.now(),
+            data: {
+              'category': category,
+              'percentageChange': percentageChange,
+              'previousAmount': previousMonthTotal,
+              'currentAmount': currentMonthTotal,
+              'timeFrame': 'month',
+            },
+            relevanceScore: min(1.0, percentageChange.abs() / 100),
+          );
+          
+          insights.add(insight);
+        }
       }
     });
     
@@ -150,7 +160,7 @@ class InsightsService {
   }
 
   // Generate budget alerts
-  Future<List<Insight>> _generateBudgetAlerts(List<app_models.Transaction> transactions, List<Budget> budgets) async {
+  Future<List<Insight>> _generateBudgetAlerts(List<app_models.TransactionModel> transactions, List<Budget> budgets) async {
     List<Insight> insights = [];
     
     if (budgets.isEmpty) return insights;
@@ -178,28 +188,36 @@ class InsightsService {
       
       // Create alerts based on percentage used
       if (percentageUsed >= 90) {
-        final insight = BudgetAlertInsight(
+        final insight = Insight(
+          id: DateTime.now().millisecondsSinceEpoch + budget.category.hashCode,
           title: 'Budget for ${budget.category} almost depleted',
           description: 'You\'ve used ${percentageUsed.toStringAsFixed(1)}% of your ${budget.category} budget for this month.',
+          type: 'warning',
           date: DateTime.now(),
-          category: budget.category,
-          budgetAmount: budget.amount,
-          spentAmount: totalSpent,
-          percentageUsed: percentageUsed,
+          data: {
+            'category': budget.category,
+            'budgetAmount': budget.amount,
+            'spentAmount': totalSpent,
+            'percentageUsed': percentageUsed,
+          },
           relevanceScore: min(1.0, percentageUsed / 100),
         );
         
         insights.add(insight);
       } else if (percentageUsed >= 75 && now.day <= 20) {
         // If we've used 75% of budget but we're only 2/3 through the month
-        final insight = BudgetAlertInsight(
+        final insight = Insight(
+          id: DateTime.now().millisecondsSinceEpoch + budget.category.hashCode + 1,
           title: 'High spending rate on ${budget.category}',
           description: 'You\'ve already used ${percentageUsed.toStringAsFixed(1)}% of your ${budget.category} budget, but we\'re only ${(now.day / 30 * 100).toStringAsFixed(1)}% through the month.',
+          type: 'warning',
           date: DateTime.now(),
-          category: budget.category,
-          budgetAmount: budget.amount,
-          spentAmount: totalSpent,
-          percentageUsed: percentageUsed,
+          data: {
+            'category': budget.category,
+            'budgetAmount': budget.amount,
+            'spentAmount': totalSpent,
+            'percentageUsed': percentageUsed,
+          },
           relevanceScore: min(0.9, percentageUsed / 100),
         );
         
@@ -211,41 +229,99 @@ class InsightsService {
   }
 
   // Generate saving opportunities
-  Future<List<Insight>> _generateSavingOpportunities(List<app_models.Transaction> transactions) async {
-    List<Insight> insights = [];
+  Future<List<Insight>> _generateSavingOpportunities(List<app_models.TransactionModel> transactions) async {
+    final List<Insight> insights = [];
     
     if (transactions.isEmpty) return insights;
     
-    // Group transactions by month if needed for future implementations
+    // Initialize categorized transactions map
+    final Map<String, List<app_models.TransactionModel>> categorizedTransactions = {};
     
     // Group transactions by category
-    Map<String, List<app_models.Transaction>> categorizedTransactions = {};
     for (var transaction in transactions) {
       if (transaction.amount < 0) { // Only consider expenses
         final category = transaction.category;
-        if (!categorizedTransactions.containsKey(category)) {
-          categorizedTransactions[category] = [];
-        }
-        categorizedTransactions[category]!.add(transaction);
+        categorizedTransactions.putIfAbsent(category, () => []).add(transaction);
       }
     }
     
-    // Define saving suggestions for each category
-    Map<String, List<String>> savingSuggestions = {
-      'Food': [
-        'Consider meal planning to reduce food waste and grocery costs.',
-        'Try cooking at home more often instead of eating out.',
-        'Look for grocery store sales and use coupons when possible.',
+    // Calculate total spending for percentage calculations
+    final totalSpending = transactions
+        .where((t) => t.amount < 0) // Only expenses
+        .fold(0.0, (sum, t) => sum + t.amount.abs());
+        
+    if (totalSpending <= 0) return insights; // No spending to analyze
+    
+    // Analyze each category for potential savings
+    for (var category in categorizedTransactions.keys) {
+      final categoryTransactions = categorizedTransactions[category]!;
+      
+      // Calculate total spent in this category
+      final totalSpent = categoryTransactions.fold(0.0, (sum, t) => sum + t.amount.abs());
+      final percentageOfTotal = (totalSpent / totalSpending * 100);
+      
+      // Only analyze categories that are a significant portion of spending (>10%)
+      if (percentageOfTotal > 10) {
+        // Get saving suggestions for this category
+        final suggestion = _getSavingSuggestion(category, totalSpent);
+        if (suggestion != null) {
+          insights.add(Insight(
+            id: DateTime.now().millisecondsSinceEpoch + category.hashCode,
+            title: 'Potential Savings in $category',
+            description: 'You\'ve spent ${NumberFormat.currency(symbol: '\$').format(totalSpent)} on $category (${percentageOfTotal.toStringAsFixed(1)}% of total spending). $suggestion',
+            type: 'recommendation',
+            date: DateTime.now(),
+            data: {
+              'category': category,
+              'amount': totalSpent,
+              'percentage': percentageOfTotal,
+            },
+            relevanceScore: min(0.8, totalSpent / 1000),
+          ));
+        }
+      }
+    }
+    
+    // Add general saving tips if no specific insights were generated
+    if (insights.isEmpty) {
+      final generalTips = [
+        'Consider reviewing your monthly subscriptions and cancel any you no longer use.',
+        'Try setting a weekly spending limit for discretionary expenses.',
+        'Meal planning can help reduce food waste and save money on groceries.',
+        'Use cashback apps when shopping online to earn money back on purchases.'
+      ];
+      
+      final randomTip = generalTips[_random.nextInt(generalTips.length)];
+      insights.add(Insight(
+        id: DateTime.now().millisecondsSinceEpoch,
+        title: 'General Saving Tip',
+        description: randomTip,
+        type: 'general',
+        date: DateTime.now(),
+        data: {'category': 'General'},
+      ));
+    }
+    
+    return insights;
+  }
+  
+  // Helper method to get a saving suggestion for a category
+  String? _getSavingSuggestion(String category, double amount) {
+    final Map<String, List<String>> savingSuggestions = {
+      'Food & Drinks': [
+        'Meal planning can save up to 20% on grocery bills.',
+        'Consider batch cooking on weekends to reduce takeout spending.',
+        'Use cashback apps for grocery shopping to earn money back.',
       ],
-      'Transport': [
-        'Consider carpooling or using public transportation when possible.',
-        'Combine errands to save on fuel costs.',
-        'Check if your car insurance offers any discounts.',
+      'Transportation': [
+        'Carpooling 2-3 times a week can save ~30% on fuel costs.',
+        'Regular vehicle maintenance improves fuel efficiency by up to 40%.',
+        'Compare gas prices using apps to find the best deals in your area.',
       ],
       'Entertainment': [
-        'Look for free or low-cost entertainment options in your area.',
-        'Consider sharing subscription services with family or friends.',
-        'Take advantage of happy hours and special promotions.',
+        'Many museums offer free admission days each month.',
+        'Consider a monthly entertainment budget to control spending.',
+        'Look for "buy one, get one" deals for movies and events.',
       ],
       'Shopping': [
         'Make a shopping list and stick to it to avoid impulse purchases.',
@@ -254,50 +330,17 @@ class InsightsService {
       ],
     };
     
-    // Analyze each category for potential savings
-    for (var category in categorizedTransactions.keys) {
-      if (!savingSuggestions.containsKey(category)) continue;
-      
-      final categoryTransactions = categorizedTransactions[category]!;
-      
-      // Calculate average monthly spending
-      final totalSpent = categoryTransactions.fold(0.0, (sum, t) => sum + t.amount.abs());
-      final monthsSpan = _calculateMonthsSpan(categoryTransactions);
-      
-      if (monthsSpan == 0) continue;
-      
-      final averageMonthlySpending = totalSpent / monthsSpan;
-      
-      // Only suggest savings for categories with significant spending
-      if (averageMonthlySpending > 100) {
-        // Estimate potential savings (10-20% of current spending)
-        final savingsPercentage = 0.1 + (_random.nextDouble() * 0.1);
-        final potentialSavings = averageMonthlySpending * savingsPercentage;
-        
-        // Get a random suggestion
-        final suggestions = savingSuggestions[category]!;
-        final suggestion = suggestions[_random.nextInt(suggestions.length)];
-        
-        final insight = SavingOpportunityInsight(
-          title: 'Potential savings on $category',
-          description: 'You could save approximately ${NumberFormat.currency(symbol: '\$').format(potentialSavings)} per month on $category expenses.',
-          date: DateTime.now(),
-          category: category,
-          potentialSavings: potentialSavings,
-          suggestion: suggestion,
-          relevanceScore: min(0.8, potentialSavings / 200),
-        );
-        
-        insights.add(insight);
-      }
+    if (savingSuggestions.containsKey(category)) {
+      final suggestions = savingSuggestions[category]!;
+      return suggestions[_random.nextInt(suggestions.length)];
     }
     
-    return insights;
+    return null;
   }
 
   // Generate financial health insights
   Future<List<Insight>> _generateFinancialHealthInsights(
-    List<app_models.Transaction> transactions,
+    List<app_models.TransactionModel> transactions,
     List<Budget> budgets,
     List<Goal> goals,
     List<IncomeSource> incomeSources,
@@ -368,15 +411,19 @@ class InsightsService {
       }
     }
     
-    final insight = FinancialHealthInsight(
+    final insight = Insight(
+      id: DateTime.now().millisecondsSinceEpoch,
       title: 'Your Financial Health: ${overallHealth.substring(0, 1).toUpperCase()}${overallHealth.substring(1)}',
       description: 'Based on your savings rate, debt levels, and emergency fund, your financial health is $overallHealth.',
+      type: overallHealth == 'good' ? 'positive' : overallHealth == 'moderate' ? 'neutral' : 'warning',
       date: DateTime.now(),
-      savingsRate: savingsRate.toDouble(),
-      debtToIncomeRatio: debtToIncomeRatio.toDouble(),
-      emergencyFundMonths: emergencyFundMonths.toDouble(),
-      overallHealth: overallHealth,
-      recommendations: recommendations,
+      data: {
+        'savingsRate': savingsRate,
+        'debtToIncomeRatio': debtToIncomeRatio,
+        'emergencyFundMonths': emergencyFundMonths,
+        'overallHealth': overallHealth,
+        'recommendations': recommendations,
+      },
       relevanceScore: 1.0, // Financial health is always highly relevant
     );
     
@@ -386,7 +433,7 @@ class InsightsService {
   }
 
   // Helper method to calculate months span in a list of transactions
-  int _calculateMonthsSpan(List<app_models.Transaction> transactions) {
+  int _calculateMonthsSpan(List<app_models.TransactionModel> transactions) {
     if (transactions.isEmpty) return 0;
     
     // Find earliest and latest dates
