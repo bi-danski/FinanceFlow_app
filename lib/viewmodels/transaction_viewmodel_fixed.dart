@@ -138,7 +138,12 @@ class TransactionViewModel extends ChangeNotifier {
     _isLoading = true;
     _selectedMonth = month;
     notifyListeners();
-    
+
+    // Update the Firestore stream to the new month
+    if (_useFirestore) {
+      _setupFirestoreListener();
+    }
+
     try {
       logger.info('Loading transactions for ${DateFormat('MMMM yyyy').format(month)}');
       
@@ -196,9 +201,6 @@ class TransactionViewModel extends ChangeNotifier {
         await _databaseService.insertTransaction(transaction);
         _transactions = await _databaseService.getTransactionsByMonth(_selectedMonth);
       }
-      
-      // Reload transactions to ensure we have the latest data
-      await loadTransactionsByMonth(_selectedMonth);
     } catch (e) {
       logger.severe('Error adding transaction: $e');
       rethrow;
@@ -220,9 +222,6 @@ class TransactionViewModel extends ChangeNotifier {
         await _databaseService.updateTransaction(transaction);
         _transactions = await _databaseService.getTransactionsByMonth(_selectedMonth);
       }
-      
-      // Reload transactions to ensure we have the latest data
-      await loadTransactionsByMonth(_selectedMonth);
     } catch (e) {
       logger.severe('Error updating transaction: $e');
       rethrow;
@@ -244,9 +243,6 @@ class TransactionViewModel extends ChangeNotifier {
         await _databaseService.deleteTransaction(id);
         _transactions = await _databaseService.getTransactionsByMonth(_selectedMonth);
       }
-      
-      // Reload transactions to ensure we have the latest data
-      await loadTransactionsByMonth(_selectedMonth);
     } catch (e) {
       logger.severe('Error deleting transaction: $e');
       rethrow;

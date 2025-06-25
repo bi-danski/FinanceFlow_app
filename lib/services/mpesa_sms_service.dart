@@ -16,7 +16,6 @@ class MpesaSmsService {
 
   final SmsQuery _query = SmsQuery();
   final Logger _logger = Logger('MpesaSmsService');
-  final TransactionService _transactionService = TransactionService.instance;
 
   // Define regex patterns for different M-Pesa SMS types
   final RegExp _mpesaReceivePattern = RegExp(
@@ -290,7 +289,7 @@ class MpesaSmsService {
         
         // Save to database
         try {
-          await _transactionService.addTransaction(transaction);
+          TransactionService.instance.addTransaction(transaction);
           _logger.info('Imported transaction: ${transaction.title}');
         } catch (e) {
           _logger.warning('Error saving transaction: $e');

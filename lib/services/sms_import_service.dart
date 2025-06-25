@@ -85,7 +85,7 @@ class SmsImportService extends ChangeNotifier {
       
       // Save unique transactions to database
       for (final transaction in uniqueTransactions) {
-        await _transactionService.addTransaction(transaction);
+        await TransactionService.instance.addTransaction(transaction);
         _importedCount++;
       }
       
@@ -124,7 +124,7 @@ class SmsImportService extends ChangeNotifier {
       );
       
       if (!exists && transaction.smsReference != null && transaction.smsReference!.isNotEmpty) {
-        await _transactionService.addTransaction(transaction);
+        await TransactionService.instance.addTransaction(transaction);
         _importedCount++;
         notifyListeners();
       }

@@ -102,6 +102,7 @@ class TransactionService {
     final endOfMonth = DateTime(month.year, month.month + 1, 0);
     
     return _transactionsCollection
+        .where('userId', isEqualTo: userId)  // Filter by current user
         .where('date', isGreaterThanOrEqualTo: startOfMonth)
         .where('date', isLessThanOrEqualTo: endOfMonth)
         .orderBy('date', descending: true)
