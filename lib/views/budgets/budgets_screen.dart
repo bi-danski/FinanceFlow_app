@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../models/budget_model.dart';
+import 'dart:async';
 
 import '../../viewmodels/budget_viewmodel.dart';
 
 import '../../widgets/app_navigation_drawer.dart';
 import '../../themes/app_theme.dart';
 import '../../services/navigation_service.dart';
+import '../../constants/app_constants.dart';
 import 'budget_form_screen.dart';
 import 'widgets/budget_card.dart';
 
@@ -18,51 +21,87 @@ class BudgetsScreen extends StatefulWidget {
 }
 
 class _BudgetsScreenState extends State<BudgetsScreen> {
-  int _selectedIndex = 1; 
+  Budget? _recentlyAddedBudget;
+  Timer? _summaryTimer;
+  int _selectedIndex = 7; 
   late BudgetViewModel _budgetViewModel;
 
   @override
   void initState() {
     super.initState();
     _budgetViewModel = Provider.of<BudgetViewModel>(context, listen: false);
-    _budgetViewModel.loadBudgets();
+    if (!_budgetViewModel.useFirestore) {
+      _budgetViewModel.loadBudgets();
+    }
   }
 
   void _onItemSelected(int index) {
     setState(() {
       _selectedIndex = index;
     });
-    // Map index to route
-    String? route;
+    // Map drawer index to route names
+    late String route;
     switch (index) {
-      case 0: route = '/dashboard'; break;
-      case 1: route = '/expenses'; break;
-      case 2: route = '/enhanced-goals'; break;
-      case 3: route = '/reports'; break;
-      case 4: route = '/family'; break;
-      case 5: route = '/settings'; break;
-      case 6: route = '/income'; break;
-      case 7: route = '/budgets'; break;
-      case 8: route = '/loans'; break;
-      case 9: route = '/insights'; break;
-      case 10: route = '/spending-heatmap'; break;
-      case 11: route = '/spending-challenges'; break;
-      case 12: route = '/profile'; break;
-      default: route = '/dashboard';
+      case 0:
+        route = AppConstants.dashboardRoute;
+        break;
+      case 1:
+        route = AppConstants.expensesRoute;
+        break;
+      case 2:
+        route = '/enhanced-goals';
+        break;
+      case 3:
+        route = AppConstants.reportsRoute;
+        break;
+      case 4:
+        route = AppConstants.familyRoute;
+        break;
+      case 5:
+        route = AppConstants.settingsRoute;
+        break;
+      case 6:
+        route = AppConstants.incomeRoute;
+        break;
+      case 7:
+        route = AppConstants.budgetsRoute; // current screen
+        break;
+      case 8:
+        route = AppConstants.loansRoute;
+        break;
+      case 9:
+        route = AppConstants.insightsRoute;
+        break;
+      case 10:
+        route = AppConstants.spendingHeatmapRoute;
+        break;
+      case 11:
+        route = AppConstants.spendingChallengesRoute;
+        break;
+      case 12:
+        route = AppConstants.profileRoute;
+        break;
+      default:
+        route = AppConstants.dashboardRoute;
     }
-    // Always close the drawer
+
+    // Close the drawer if open
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     }
+
     // Only navigate if not already on the target route
     final currentRoute = ModalRoute.of(context)?.settings.name;
     if (currentRoute != route) {
       NavigationService.navigateToReplacement(route);
     }
+
   }
 
   @override
   Widget build(BuildContext context) {
+    final budgetViewModel = Provider.of<BudgetViewModel>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Budget Management'),
@@ -80,10 +119,14 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
         onItemSelected: _onItemSelected,
       ),
       body: RefreshIndicator(
-        onRefresh: () => _budgetViewModel.loadBudgets(),
-        child: _budgetViewModel.isLoading
+        onRefresh: () async {
+          if (!budgetViewModel.useFirestore) {
+            await budgetViewModel.loadBudgets();
+          }
+        },
+        child: budgetViewModel.isLoading
             ? const Center(child: CircularProgressIndicator())
-            : _buildContent(_budgetViewModel),
+            : _buildContent(budgetViewModel),
       ),
       floatingActionButton: Builder(
         builder: (localContext) {
@@ -96,7 +139,18 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                 ),
               );
               if (!localContext.mounted) return;
-              if (result == true) {
+              if (result is Budget) {
+                setState(() {
+                  _recentlyAddedBudget = result;
+                });
+                _summaryTimer?.cancel();
+                _summaryTimer = Timer(const Duration(seconds: 5), () {
+                  if (mounted) {
+                    setState(() => _recentlyAddedBudget = null);
+                  }
+                });
+                Provider.of<BudgetViewModel>(localContext, listen: false).loadBudgets();
+              } else if (result == true) {
                 Provider.of<BudgetViewModel>(localContext, listen: false).loadBudgets();
               }
             },
@@ -111,19 +165,19 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
   }
 
   Widget _buildContent(BudgetViewModel viewModel) {
+    final children = <Widget>[];
+    if (_recentlyAddedBudget != null) {
+      children.add(_buildAddedBudgetCard());
+      children.add(const SizedBox(height: 8));
+    }
+
     if (viewModel.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
     if (viewModel.budgets.isEmpty) {
       return _buildEmptyState();
     }
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    children.addAll([
             _buildBudgetSummary(viewModel),
             const SizedBox(height: 16),
             const Text(
@@ -134,7 +188,6 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            // Display real budgets
             ...viewModel.budgets.map((budget) => BudgetCard(
               budget: budget,
               onTap: () async {
@@ -149,7 +202,31 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                 }
               },
             )),
-          ],
+          ]);
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: children,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddedBudgetCard() {
+    final currencyFormat = NumberFormat.currency(symbol: '\$');
+    final b = _recentlyAddedBudget!;
+    return Card(
+      color: Colors.green.shade50,
+      child: ListTile(
+        leading: const Icon(Icons.account_balance_wallet, color: Colors.green),
+        title: Text(b.category),
+        subtitle: Text('Amount: \\${currencyFormat.format(b.amount)}'),
+        trailing: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => setState(() => _recentlyAddedBudget = null),
         ),
       ),
     );
