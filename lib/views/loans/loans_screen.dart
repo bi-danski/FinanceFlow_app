@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../viewmodels/loan_viewmodel.dart';
 import '../../models/loan_model.dart';
 import '../../widgets/app_navigation_drawer.dart';
 import '../../themes/app_theme.dart';
+import '../../services/navigation_service.dart';
 import '../../constants/app_constants.dart';
 import 'loan_form_screen.dart';
 import 'loan_payment_screen.dart';
@@ -19,6 +21,13 @@ class LoansScreen extends StatefulWidget {
 }
 
 class _LoansScreenState extends State<LoansScreen> {
+  @override
+  void dispose() {
+    _summaryTimer?.cancel();
+    super.dispose();
+  }
+  Loan? _recentlyAddedLoan;
+  Timer? _summaryTimer;
   int _selectedIndex = 8; // Loans tab selected
   bool _isLoading = false;
   String _selectedFilter = 'All';
@@ -53,10 +62,14 @@ class _LoansScreenState extends State<LoansScreen> {
   }
 
   void _onItemSelected(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    // Navigation would be handled here
+    setState(() => _selectedIndex = index);
+
+    final route = NavigationService.routeForDrawerIndex(index);
+
+    if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+    if (ModalRoute.of(context)?.settings.name != route) {
+      NavigationService.navigateToReplacement(route);
+    }
   }
 
   @override
@@ -112,8 +125,16 @@ class _LoansScreenState extends State<LoansScreen> {
             ),
           );
           
-          if (result == true) {
-            // Refresh the list if a loan was added
+          if (result is Loan) {
+            setState(() {
+              _recentlyAddedLoan = result;
+            });
+            _summaryTimer?.cancel();
+            _summaryTimer = Timer(const Duration(seconds: 5), () {
+              if (mounted) setState(() => _recentlyAddedLoan = null);
+            });
+            _loadLoans();
+          } else if (result == true) {
             _loadLoans();
           }
         },
@@ -126,8 +147,8 @@ class _LoansScreenState extends State<LoansScreen> {
   }
 
   Widget _buildContent(LoanViewModel viewModel) {
+    // Filter loans based on selected filter
     List<Loan> filteredLoans;
-    
     if (_selectedFilter == 'All') {
       filteredLoans = viewModel.loans;
     } else if (_selectedFilter == 'Overdue') {
@@ -135,44 +156,62 @@ class _LoansScreenState extends State<LoansScreen> {
     } else {
       filteredLoans = viewModel.getLoansByStatus(_selectedFilter);
     }
-    
+
     if (filteredLoans.isEmpty) {
       return _buildEmptyState();
     }
-    
+
+    final List<Widget> children = [];
+
+    // Recently added confirmation
+    if (_recentlyAddedLoan != null) {
+      children..add(_buildAddedLoanCard())..add(const SizedBox(height: 8));
+    }
+
+    children.addAll([
+      _buildLoanSummary(viewModel),
+      const SizedBox(height: 16),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            _selectedFilter == 'All' ? 'All Loans' : '$_selectedFilter Loans',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            '${filteredLoans.length} ${filteredLoans.length == 1 ? 'loan' : 'loans'}',
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      ...filteredLoans.map((loan) => _buildLoanCard(loan)),
+    ]);
+
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildLoanSummary(viewModel),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _selectedFilter == 'All' 
-                      ? 'All Loans' 
-                      : '$_selectedFilter Loans',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  '${filteredLoans.length} ${filteredLoans.length == 1 ? 'loan' : 'loans'}',
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            ...filteredLoans.map((loan) => _buildLoanCard(loan)),
-          ],
+          children: children,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddedLoanCard() {
+    final currencyFormat = NumberFormat.currency(symbol: '\$');
+    final l = _recentlyAddedLoan!;
+    return Card(
+      color: Colors.green.shade50,
+      child: ListTile(
+        leading: const Icon(Icons.check_circle, color: Colors.green),
+        title: Text(l.name),
+        subtitle: Text('Amount: \\${currencyFormat.format(l.totalAmount)}'),
+        trailing: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => setState(() => _recentlyAddedLoan = null),
         ),
       ),
     );

@@ -101,7 +101,7 @@ class _BudgetFormScreenState extends State<BudgetFormScreen> {
         
         if (success) {
           if (mounted) {
-            Navigator.pop(context, true); // Return success
+            Navigator.pop(context, budget); // Return the saved budget
           }
         } else {
           if (mounted) {

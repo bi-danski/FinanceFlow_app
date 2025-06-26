@@ -129,7 +129,7 @@ class _LoanFormScreenState extends State<LoanFormScreen> {
         
         if (success) {
           if (mounted) {
-            Navigator.pop(context, true); // Return success
+            Navigator.pop(context, loan); // Return the saved loan
           }
         } else {
           if (mounted) {
