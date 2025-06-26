@@ -8,6 +8,7 @@ import '../../models/income_source_model.dart';
 import '../../widgets/app_navigation_drawer.dart';
 import '../../themes/app_theme.dart';
 import '../../constants/app_constants.dart';
+import '../../services/navigation_service.dart';
 import 'income_form_screen.dart';
 
 class IncomeScreen extends StatefulWidget {
@@ -20,7 +21,7 @@ class IncomeScreen extends StatefulWidget {
 class _IncomeScreenState extends State<IncomeScreen> {
   int _selectedIndex = 7; // Income tab selected
   bool _isLoading = false;
-  String _selectedFilter = 'All';
+  final String _selectedFilter = 'All';
 
   @override
   void initState() {
@@ -29,9 +30,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
   }
 
   Future<void> _loadIncomeSources() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final incomeViewModel = Provider.of<IncomeViewModel>(context, listen: false);
@@ -44,82 +43,42 @@ class _IncomeScreenState extends State<IncomeScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
 
   void _onItemSelected(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    // Navigation would be handled here
+    setState(() => _selectedIndex = index);
+
+    final String route = NavigationService.routeForDrawerIndex(index);
+
+    if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+    if (ModalRoute.of(context)?.settings.name != route) {
+      NavigationService.navigateToReplacement(route);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final incomeViewModel = Provider.of<IncomeViewModel>(context);
-    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Income Management'),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              setState(() {
-                _selectedFilter = value;
-              });
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'All',
-                child: Text('All Income'),
-              ),
-              const PopupMenuItem(
-                value: 'Recurring',
-                child: Text('Recurring Only'),
-              ),
-              ...AppConstants.incomeSourceTypes.map((type) => 
-                PopupMenuItem(
-                  value: type,
-                  child: Text(type),
-                )
-              ),
-            ],
-            icon: const Icon(Icons.filter_list),
-          ),
-        ],
+        title: const Text('Income'),
+      ),
+      body: Consumer<IncomeViewModel>(
+        builder: (context, viewModel, child) {
+          if (_isLoading) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+
+          return _buildContent(viewModel);
+        },
       ),
       drawer: AppNavigationDrawer(
         selectedIndex: _selectedIndex,
         onItemSelected: _onItemSelected,
-      ),
-      body: RefreshIndicator(
-        onRefresh: _loadIncomeSources,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _buildContent(incomeViewModel),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const IncomeFormScreen(),
-            ),
-          );
-          
-          if (result == true) {
-            // Refresh the list if an income source was added
-            _loadIncomeSources();
-          }
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Add Income'),
-        backgroundColor: AppTheme.incomeColor,
-        foregroundColor: Colors.white,
       ),
     );
   }
@@ -526,7 +485,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: _getIncomeTypeColor(type).withValues(alpha: 0.1),
+        color: _getIncomeTypeColor(type).withValues(alpha:0.1),
         shape: BoxShape.circle,
       ),
       child: FaIcon(
