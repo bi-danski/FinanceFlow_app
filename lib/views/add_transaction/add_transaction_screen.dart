@@ -128,7 +128,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       }
       
       if (mounted) {
-        Navigator.pop(context, true); // Return true to indicate success
+        Navigator.pop(context, transaction); // Return the saved transaction
       }
     } catch (e) {
       // Handle error

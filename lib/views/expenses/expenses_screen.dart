@@ -22,6 +22,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> with SingleTickerProvid
   int _selectedIndex = 1; // Expenses tab selected
   String _selectedFilter = 'All';
   late TabController _tabController;
+  // Holds the most recently added transaction so we can show a confirmation card
+  Transaction? _recentlyAddedTransaction;
   
   @override
   void initState() {
@@ -40,6 +42,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> with SingleTickerProvid
     super.dispose();
   }
 
+  // This method is currently unused; consider removing if not needed.
+  // ignore: unused_element
   Future<void> _loadTransactions() async {
     final transactionViewModel = Provider.of<TransactionViewModel>(context, listen: false);
     // Load transactions for the current month
@@ -232,6 +236,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> with SingleTickerProvid
             selectedFilter: _selectedFilter,
             onFilterChanged: _onFilterChanged,
           ),
+          if (_recentlyAddedTransaction != null) _buildAddedSummaryCard(),
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -269,9 +274,18 @@ class _ExpensesScreenState extends State<ExpensesScreen> with SingleTickerProvid
                 ),
               );
               
-              if (result == true) {
-                // Refresh the list if a transaction was added
-                _loadTransactions();
+              if (result != null && result is Transaction) {
+                setState(() {
+                  _recentlyAddedTransaction = result;
+                });
+                // Optionally auto-hide after few seconds
+                Future.delayed(const Duration(seconds: 5), () {
+                  if (mounted) {
+                    setState(() {
+                      _recentlyAddedTransaction = null;
+                    });
+                  }
+                });
               }
             },
             icon: const Icon(Icons.add),
@@ -479,6 +493,25 @@ class _ExpensesScreenState extends State<ExpensesScreen> with SingleTickerProvid
     );
   }
 
+  // Summary card shown after successfully adding an expense
+  Widget _buildAddedSummaryCard() {
+    final txn = _recentlyAddedTransaction!;
+    final currencyFormat = NumberFormat.currency(symbol: '\$');
+    return Card(
+      color: Colors.green.shade50,
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: ListTile(
+        leading: const Icon(Icons.check_circle, color: Colors.green),
+        title: Text(txn.title),
+        subtitle: Text('Amount: \\${currencyFormat.format(txn.amount)}'),
+        trailing: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => setState(() => _recentlyAddedTransaction = null),
+        ),
+      ),
+    );
+  }
+
   Widget _buildExpenseItem(Transaction transaction) {
     final currencyFormat = NumberFormat.currency(symbol: '\$');
     
@@ -494,6 +527,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> with SingleTickerProvid
         ),
         title: Row(
           children: [
+
             Expanded(
               child: Text(
                 transaction.title,

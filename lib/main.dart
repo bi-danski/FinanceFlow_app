@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:logging/logging.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -53,6 +54,17 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     _logger.info('Firebase initialized successfully');
+
+    // Listen for auth state changes and log the current UID
+    FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user != null) {
+        _logger.info('Logged-in UID: \\${user.uid}');
+        debugPrint('LOGGED-IN UID: \\${user.uid}');
+      } else {
+        _logger.warning('No user signed in');
+        debugPrint('No user signed in');
+      }
+    });
     
     // Initialize Firestore settings
     FirebaseFirestore.instance.settings = const Settings(

@@ -183,7 +183,7 @@ class TransactionModel {
     return {
       'title': title,
       'amount': amount,
-      'date': date.toIso8601String(),
+      'date': Timestamp.fromDate(date),
       'category': category,
       'description': description,
       'type': type.toString(),
@@ -196,8 +196,8 @@ class TransactionModel {
       'status': status.toString(),
       'paidAmount': paidAmount,
       'isCarriedForward': isCarriedForward,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
     };
   }
 
