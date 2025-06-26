@@ -57,6 +57,40 @@ class NavigationService {
     return navigator!.pop();
   }
 
+  /// Map drawer index to route name
+  static String routeForDrawerIndex(int index) {
+    switch (index) {
+      case 0:
+        return AppConstants.dashboardRoute;
+      case 1:
+        return AppConstants.expensesRoute;
+      case 2:
+        return '/enhanced-goals';
+      case 3:
+        return AppConstants.reportsRoute;
+      case 4:
+        return AppConstants.familyRoute;
+      case 5:
+        return AppConstants.settingsRoute;
+      case 6:
+        return AppConstants.incomeRoute;
+      case 7:
+        return AppConstants.budgetsRoute;
+      case 8:
+        return AppConstants.loansRoute;
+      case 9:
+        return AppConstants.insightsRoute;
+      case 10:
+        return AppConstants.spendingHeatmapRoute;
+      case 11:
+        return AppConstants.spendingChallengesRoute;
+      case 12:
+        return AppConstants.profileRoute;
+      default:
+        return AppConstants.dashboardRoute;
+    }
+  }
+
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case AppConstants.dashboardRoute:
