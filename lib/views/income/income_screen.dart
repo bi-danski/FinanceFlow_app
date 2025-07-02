@@ -80,6 +80,23 @@ class _IncomeScreenState extends State<IncomeScreen> {
         selectedIndex: _selectedIndex,
         onItemSelected: _onItemSelected,
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const IncomeFormScreen(),
+            ),
+          );
+          if (result == true) {
+            _loadIncomeSources();
+          }
+        },
+        backgroundColor: AppTheme.incomeColor,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add),
+        tooltip: 'Add Income Source',
+      ),
     );
   }
 
