@@ -13,6 +13,7 @@ import '../viewmodels/goal_viewmodel.dart';
 import '../viewmodels/family_viewmodel.dart';
 import '../viewmodels/income_viewmodel.dart';
 import '../viewmodels/loan_viewmodel.dart';
+import '../viewmodels/bill_viewmodel.dart';
 import '../viewmodels/insights_viewmodel.dart';
 
 /// A dedicated provider for application services that properly handles lifecycle
@@ -62,6 +63,7 @@ class ServiceProvider {
       ChangeNotifierProvider(create: (_) => FamilyViewModel()),
       ChangeNotifierProvider(create: (_) => IncomeViewModel()),
       ChangeNotifierProvider(create: (_) => LoanViewModel()),
+      ChangeNotifierProvider(create: (_) => BillViewModel()),
       ChangeNotifierProvider(create: (_) => InsightsViewModel()),
     ];
     

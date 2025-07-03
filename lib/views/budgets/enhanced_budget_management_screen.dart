@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../models/budget_model.dart';
 import '../../viewmodels/budget_viewmodel.dart';
 import '../../widgets/app_navigation_drawer.dart';
+import '../../services/navigation_service.dart';
 import '../../widgets/budget/interactive_budget_wheel.dart';
 import '../../widgets/budget/budget_timeline_chart.dart';
 import '../../widgets/budget/smart_budget_recommendations.dart';
@@ -101,9 +102,19 @@ class _EnhancedBudgetManagementScreenState extends State<EnhancedBudgetManagemen
   
   // Helper method to handle navigation item selection
   void _onItemSelected(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
+
+    String route = NavigationService.routeForDrawerIndex(index);
+
+    // Close drawer if open
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+
+    // Navigate only if not already on target route
+    if (ModalRoute.of(context)?.settings.name != route) {
+      NavigationService.navigateToReplacement(route);
+    }
   }
 
   Future<void> _loadBudgets() async {

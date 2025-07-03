@@ -297,6 +297,21 @@ class DatabaseService {
       )
     ''');
     
+    // Create insights table
+    await db.execute('''
+      CREATE TABLE insights (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        type TEXT NOT NULL,
+        date TEXT NOT NULL,
+        isRead INTEGER NOT NULL,
+        isDismissed INTEGER NOT NULL,
+        relevanceScore REAL,
+        data TEXT
+      )
+    ''');
+    
     _logger.info('Database tables created successfully');
   }
 
@@ -752,18 +767,58 @@ class DatabaseService {
   }
   
   // Insight methods
+  // Ensure insights table exists; useful for pre-1.0 user DBs
+  Future<void> _ensureInsightsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS insights (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        type TEXT NOT NULL,
+        date TEXT NOT NULL,
+        isRead INTEGER NOT NULL,
+        isDismissed INTEGER NOT NULL,
+        relevanceScore REAL,
+        data TEXT
+      )
+    ''');
+  }
+
   Future<List<Insight>> getInsights() async {
-    _logger.warning('getInsights() called but not fully implemented');
-    return <Insight>[]; // Explicitly typed empty list
+    final db = await database;
+    await _ensureInsightsTable(db);
+    final rows = await db.query('insights', orderBy: 'date DESC');
+    final insights = rows.map((e) => Insight.fromMap(e)).toList();
+    _logger.info('Fetched ${insights.length} insights from SQLite');
+    return insights;
   }
   
   Future<int> insertInsight(Insight insight) async {
-    _logger.warning('insertInsight() called but not fully implemented');
-    return -1; // Return -1 to indicate not implemented
+    final db = await database;
+    await _ensureInsightsTable(db);
+    final id = await db.insert(
+      'insights',
+      insight.toMap()..remove('id'),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    _logger.info('Inserted insight with id: $id');
+    return id;
   }
   
   Future<int> updateInsight(Insight insight) async {
-    _logger.warning('updateInsight() called but not fully implemented');
-    return -1; // Return -1 to indicate not implemented
+    if (insight.id == null) {
+      _logger.warning('updateInsight called with null id');
+      return -1;
+    }
+    final db = await database;
+    await _ensureInsightsTable(db);
+    final count = await db.update(
+      'insights',
+      insight.toMap()..remove('id'),
+      where: 'id = ?',
+      whereArgs: [insight.id],
+    );
+    _logger.info('Updated $count insight record(s) for id ${insight.id}');
+    return count;
   }
 }

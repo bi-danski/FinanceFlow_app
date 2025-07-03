@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../../services/navigation_service.dart';
 
 // Import local files
 import '../../models/insight_model.dart';
@@ -124,9 +125,19 @@ class _InsightsScreenState extends State<InsightsScreen> with SingleTickerProvid
 
   // Helper method to handle navigation item selection
   void _onItemSelected(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
+
+    String route = NavigationService.routeForDrawerIndex(index);
+
+    // Close drawer if open
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+
+    // Navigate only if not already on target route
+    if (ModalRoute.of(context)?.settings.name != route) {
+      NavigationService.navigateToReplacement(route);
+    }
   }
 
   // Get appropriate icon for each insight type
@@ -450,7 +461,7 @@ class _InsightsScreenState extends State<InsightsScreen> with SingleTickerProvid
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                        color: Theme.of(context).colorScheme.primary.withAlpha(51),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
@@ -480,10 +491,9 @@ class _InsightsScreenState extends State<InsightsScreen> with SingleTickerProvid
           ),
         ),
       ),
-    )
-        .animate()
-        .fadeIn(duration: const Duration(milliseconds: 500))
-        .slideY(begin: 0.1, end: 0, duration: const Duration(milliseconds: 400));
+    ) // Added missing parenthesis to close Card widget
+      .animate()
+        .fadeIn(duration: const Duration(milliseconds: 500));
   }
 
   // Helper function to build insights list

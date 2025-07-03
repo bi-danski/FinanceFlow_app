@@ -89,23 +89,33 @@ class TransactionModel {
   factory TransactionModel.fromMap(Map<String, dynamic> map, {String? id}) {
     return TransactionModel(
       id: id ?? map['id'],
-      title: map['title'] as String,
+      title: map['title']?.toString() ?? '',
       amount: (map['amount'] as num).toDouble(),
-      date: map['date'] is Timestamp 
-          ? (map['date'] as Timestamp).toDate() 
-          : DateTime.parse(map['date'] as String),
-      category: map['category'] as String,
-      description: map['description'] as String?,
-      type: _transactionTypeFromString(map['type'] as String?),
-      fromAccount: map['fromAccount'] as String?,
-      toAccount: map['toAccount'] as String?,
-      userId: map['userId'] as String,
-      notes: map['notes'] as String?,
+      date: (() {
+        final rawDate = map['date'];
+        if (rawDate is Timestamp) {
+          return rawDate.toDate();
+        } else if (rawDate is int) {
+          // Firestore integer (epoch milliseconds or seconds) → DateTime
+          // Heuristic: if value looks like seconds (10 digits), multiply by 1000.
+          final ms = rawDate > 1000000000000 ? rawDate : rawDate * 1000;
+          return DateTime.fromMillisecondsSinceEpoch(ms);
+        } else {
+          return DateTime.parse(rawDate.toString());
+        }
+      })(),
+      category: map['category']?.toString() ?? '',
+      description: map['description']?.toString(),
+      type: _transactionTypeFromString(map['type']?.toString()),
+      fromAccount: map['fromAccount']?.toString(),
+      toAccount: map['toAccount']?.toString(),
+      userId: map['userId']?.toString() ?? '',
+      notes: map['notes']?.toString(),
       isSynced: map['isSynced'] as bool? ?? true,
-      smsReference: map['smsReference'] as String?,
-      status: map['status'] is TransactionStatus 
-          ? map['status'] as TransactionStatus 
-          : _transactionStatusFromString(map['status'] as String?),
+      smsReference: map['smsReference']?.toString(),
+      status: map['status'] is TransactionStatus
+          ? map['status'] as TransactionStatus
+          : _transactionStatusFromString(map['status']?.toString()),
       paidAmount: (map['paidAmount'] as num?)?.toDouble(),
       isCarriedForward: map['isCarriedForward'] as bool? ?? false,
       createdAt: map['createdAt'] is Timestamp 

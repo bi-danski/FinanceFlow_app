@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 import '../../models/spending_challenge_model.dart';
 import '../../widgets/app_navigation_drawer.dart';
+import '../../services/navigation_service.dart';
 
 class SpendingChallengesScreen extends StatefulWidget {
   const SpendingChallengesScreen({super.key});
@@ -211,9 +212,19 @@ class _SpendingChallengesScreenState extends State<SpendingChallengesScreen> wit
   }
 
   void _onItemSelected(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
+
+    final String route = NavigationService.routeForDrawerIndex(index);
+
+    // Close drawer if open
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+
+    // Navigate only if not already on target route
+    if (ModalRoute.of(context)?.settings.name != route) {
+      NavigationService.navigateToReplacement(route);
+    }
   }
 
   @override

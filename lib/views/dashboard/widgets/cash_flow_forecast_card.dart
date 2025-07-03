@@ -39,11 +39,24 @@ class _CashFlowForecastCardState extends State<CashFlowForecastCard> {
   bool _showIncome = true;
   bool _showExpenses = true;
   bool _showBalance = true;
+  static const _lowThreshold = 100.0;
   
   @override
   Widget build(BuildContext context) {
     // Combine historical and forecast data
     final allData = [...widget.historicalData, ...widget.forecastData];
+    // Spots for special markers
+    final List<FlSpot> negativeSpots = [];
+    final List<FlSpot> lowSpots = [];
+    for (int i = 0; i < widget.forecastData.length; i++) {
+      final idx = widget.historicalData.length + i;
+      final pt = widget.forecastData[i];
+      if (pt.balance < 0) {
+        negativeSpots.add(FlSpot(idx.toDouble(), pt.balance));
+      } else if (pt.balance < _lowThreshold) {
+        lowSpots.add(FlSpot(idx.toDouble(), pt.balance));
+      }
+    }
     
     // Find min and max values for the chart
     double minY = 0;
@@ -81,7 +94,7 @@ class _CashFlowForecastCardState extends State<CashFlowForecastCard> {
     // Check for potential low balance days
     final List<CashFlowPoint> lowBalanceDays = [];
     for (final point in widget.forecastData) {
-      if (point.balance > 0 && point.balance < 100) {
+      if (point.balance > 0 && point.balance < _lowThreshold) {
         lowBalanceDays.add(point);
       }
     }
@@ -285,7 +298,11 @@ class _CashFlowForecastCardState extends State<CashFlowForecastCard> {
                           dotData: const FlDotData(show: false),
                           belowBarData: BarAreaData(
                             show: true,
-                            color: Colors.blue.withValues(alpha: 26),  // 0.1 * 255 = 26
+                            gradient: LinearGradient(
+                              colors: [Colors.blue.withValues(alpha: 102), Colors.transparent],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
                           ),
                         ),
                       
@@ -349,6 +366,15 @@ class _CashFlowForecastCardState extends State<CashFlowForecastCard> {
                           }).toList();
                         },
                       ),
+                    ),
+                    extraLinesData: ExtraLinesData(
+                      horizontalLines: [
+                        HorizontalLine(
+                          y: 0,
+                          color: Colors.grey,
+                          strokeWidth: 1,
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -420,7 +446,7 @@ class _CashFlowForecastCardState extends State<CashFlowForecastCard> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Your balance may drop below \$100 on ${dateFormat.format(lowBalanceDays.first.date)}. '
+                      'Your balance may drop below \$${_lowThreshold.toInt()} on ${dateFormat.format(lowBalanceDays.first.date)}. '
                       'Consider adjusting your budget to avoid potential issues.',
                       style: TextStyle(
                         color: Colors.amber[700],

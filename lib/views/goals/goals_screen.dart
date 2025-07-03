@@ -2,10 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
+import '../../services/navigation_service.dart';
+import '../../constants/app_constants.dart';
+
 import '../../viewmodels/goal_viewmodel.dart';
 import '../../widgets/app_navigation_drawer.dart';
 import '../../themes/app_theme.dart';
 import 'widgets/goal_card.dart';
+import 'add_goal_screen.dart';
+import 'goal_details_screen.dart';
+import '../../models/goal_model.dart';
 import 'widgets/add_goal_button.dart';
 
 class GoalsScreen extends StatefulWidget {
@@ -16,7 +22,7 @@ class GoalsScreen extends StatefulWidget {
 }
 
 class _GoalsScreenState extends State<GoalsScreen> {
-  int _selectedIndex = 2; // Goals tab selected
+  final int _selectedIndex = 2; // Goals tab selected
 
   @override
   void initState() {
@@ -30,10 +36,43 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   void _onItemSelected(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    // Navigation would be handled here
+    Navigator.of(context).pop(); // close drawer
+    switch (index) {
+      case 0:
+        NavigationService.navigateTo(AppConstants.dashboardRoute);
+        break;
+      case 1:
+        NavigationService.navigateTo(AppConstants.expensesRoute);
+        break;
+      case 6:
+        NavigationService.navigateTo(AppConstants.incomeRoute);
+        break;
+      case 7:
+        NavigationService.navigateTo('/budgets');
+        break;
+      case 8:
+        NavigationService.navigateTo(AppConstants.loansRoute);
+        break;
+      case 3:
+        NavigationService.navigateTo(AppConstants.reportsRoute);
+        break;
+      case 9:
+        NavigationService.navigateTo(AppConstants.insightsRoute);
+        break;
+      case 4:
+        NavigationService.navigateTo(AppConstants.familyRoute);
+        break;
+      case 5:
+        NavigationService.navigateTo(AppConstants.settingsRoute);
+        break;
+      case 10:
+        NavigationService.navigateTo(AppConstants.profileRoute);
+        break;
+      default:
+        // already on Goals (index 2) or unknown
+        break;
+    }
+
   }
 
   @override
@@ -65,8 +104,16 @@ class _GoalsScreenState extends State<GoalsScreen> {
         ],
       ),
       floatingActionButton: AddGoalButton(
-        onPressed: () {
-          // Navigate to add goal screen
+        onPressed: () async {
+          final added = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const AddGoalScreen(),
+            ),
+          );
+          if (added == true) {
+            _loadGoals();
+          }
         },
       ),
     );
@@ -189,61 +236,43 @@ class _GoalsScreenState extends State<GoalsScreen> {
       );
     }
     
-    // For demo purposes, we'll use mock data
-    final mockGoals = [
-      {
-        'name': 'Vacation Fund',
-        'currentAmount': 1400.0,
-        'targetAmount': 3000.0,
-        'targetDate': DateTime.now().add(const Duration(days: 120)),
-        'category': 'Vacation',
-      },
-      {
-        'name': 'Emergency Fund',
-        'currentAmount': 4200.0,
-        'targetAmount': 10000.0,
-        'targetDate': DateTime.now().add(const Duration(days: 365)),
-        'category': 'Emergency Fund',
-      },
-      {
-        'name': 'New Laptop',
-        'currentAmount': 600.0,
-        'targetAmount': 1200.0,
-        'targetDate': DateTime.now().add(const Duration(days: 60)),
-        'category': 'Electronics',
-      },
-    ];
+    final goals = viewModel.goals;
     
     return ListView.builder(
       padding: const EdgeInsets.all(16.0),
-      itemCount: mockGoals.length,
+      itemCount: goals.length,
       itemBuilder: (context, index) {
-        final goal = mockGoals[index];
+        final goal = goals[index];
         return GoalCard(
-          name: goal['name'] as String,
-          currentAmount: goal['currentAmount'] as double,
-          targetAmount: goal['targetAmount'] as double,
-          targetDate: goal['targetDate'] as DateTime,
-          category: goal['category'] as String,
+          name: goal.name,
+          currentAmount: goal.currentAmount,
+          targetAmount: goal.targetAmount,
+          targetDate: goal.targetDate ?? DateTime.now(),
+          category: goal.category ?? 'General',
           onTap: () {
-            // Navigate to goal details
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => GoalDetailsScreen(goal: goal),
+              ),
+            );
           },
           onAddFunds: () {
-            _showAddFundsDialog(goal['name'] as String);
+            _showAddFundsDialog(goal);
           },
         );
       },
     );
   }
 
-  void _showAddFundsDialog(String goalName) {
+  void _showAddFundsDialog(Goal goal) {
     final TextEditingController amountController = TextEditingController();
     
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Add funds to $goalName'),
+          title: Text('Add funds to ${goal.name}'),
           content: TextField(
             controller: amountController,
             keyboardType: TextInputType.number,
@@ -261,7 +290,11 @@ class _GoalsScreenState extends State<GoalsScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                // Add funds to goal
+                final amount = double.tryParse(amountController.text.trim());
+                if (amount != null && amount > 0) {
+                  final vm = Provider.of<GoalViewModel>(context, listen: false);
+                  vm.updateGoalProgress(goal, amount);
+                }
                 Navigator.pop(context);
               },
               child: const Text('Add Funds'),

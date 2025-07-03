@@ -22,7 +22,7 @@ class _SpendingTrendChartState extends State<SpendingTrendChart> {
     final ts = Provider.of<TransactionService>(context, listen: false);
     if (_transactionService != ts) {
       _transactionService = ts;
-      _spendingHistoryFuture = _transactionService!.getMonthlySpendingHistory(numberOfMonths: 6);
+      _spendingHistoryFuture = _transactionService!.getMonthlySpendingHistory();
     }
   }
 
@@ -71,7 +71,7 @@ class _SpendingTrendChartState extends State<SpendingTrendChart> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Monthly Spending Trend (Last ${spots.length} Months)',
+                  'Monthly Spending Trend',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 20),

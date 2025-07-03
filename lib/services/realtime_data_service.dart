@@ -142,9 +142,7 @@ class RealtimeDataService extends ChangeNotifier {
           try {
             final transactions = snapshot.docs.map((doc) {
               final data = doc.data() as Map<String, dynamic>;
-              // Convert Firestore document ID to transaction ID
-              data['id'] = int.tryParse(doc.id) ?? 0;
-              return app_models.Transaction.fromMap(data);
+              return app_models.Transaction.fromMap(data, id: doc.id);
             }).toList();
             
             _transactionsController.add(transactions);
@@ -211,7 +209,7 @@ class RealtimeDataService extends ChangeNotifier {
           try {
             final goals = snapshot.docs.map((doc) {
               final data = doc.data() as Map<String, dynamic>;
-              data['id'] = int.tryParse(doc.id) ?? 0;
+              data['id'] = doc.id;
               return Goal.fromMap(data);
             }).toList();
             

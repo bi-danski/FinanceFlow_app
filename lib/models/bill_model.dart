@@ -38,4 +38,22 @@ class Bill {
       frequency: map['frequency'],
     );
   }
+
+  Bill copyWith({
+    String? id,
+    String? name,
+    double? amount,
+    DateTime? dueDate,
+    bool? isRecurring,
+    String? frequency,
+  }) {
+    return Bill(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      amount: amount ?? this.amount,
+      dueDate: dueDate ?? this.dueDate,
+      isRecurring: isRecurring ?? this.isRecurring,
+      frequency: frequency ?? this.frequency,
+    );
+  }
 }

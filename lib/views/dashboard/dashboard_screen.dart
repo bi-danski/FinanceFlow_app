@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 // Services
 import '../../services/transaction_service.dart';
 import '../../services/realtime_data_service.dart';
+import '../../services/budget_service.dart';
 
 // Models
 import '../../models/transaction_model.dart' as models;
@@ -15,8 +16,11 @@ import '../../models/transaction_model.dart' as models;
 import '../../widgets/error_widget.dart' as app_error;
 import 'package:financeflow_app/views/dashboard/widgets/dashboard_financial_summary.dart';
 import 'package:financeflow_app/views/dashboard/widgets/financial_summary_card.dart';
+import 'package:financeflow_app/views/dashboard/widgets/financial_health_donut.dart';
+import 'package:financeflow_app/views/dashboard/widgets/visualizations/budget_progress_bar.dart';
 import 'package:financeflow_app/views/dashboard/widgets/spending_trend_chart.dart';
 import 'package:financeflow_app/views/dashboard/widgets/upcoming_bills_card.dart';
+import 'package:financeflow_app/views/dashboard/widgets/cash_flow_forecast_card.dart' show CashFlowPoint, CashFlowForecastCard;
 import './widgets/quick_actions_panel.dart';
 import '../../widgets/animated_button.dart';
 
@@ -24,7 +28,8 @@ import '../../widgets/animated_button.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/app_navigation_drawer.dart';
 import './widgets/visualizations/animated_pie_chart.dart';
-import '../../constants/app_constants.dart';
+import '../../services/navigation_service.dart'; // Import NavigationService
+import 'package:financeflow_app/constants/app_constants.dart';
 
 /// Dashboard screen showing financial overview, recent transactions, and quick actions
 class DashboardScreen extends StatefulWidget {
@@ -47,7 +52,10 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   double _income = 0.0;
   double _expenses = 0.0;
   double _balance = 0.0;
+  double _budget = 0.0;
   Map<String, double> _categoryTotals = {};
+  List<CashFlowPoint> _historicalCashFlow = [];
+  List<CashFlowPoint> _forecastCashFlow = [];
   List<models.Transaction> _recentTransactions = [];
   int _selectedMonthIndex = DateTime.now().month - 1;
   final List<String> _months = [
@@ -118,9 +126,14 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       final now = DateTime.now();
       final currentMonth = DateTime(now.year, _selectedMonthIndex + 1);
 
+      // Fetch monthly budget once at start of load
+      final budgetService = BudgetService();
+      final budgetAmount = await budgetService.getMonthlyBudget(currentMonth);
+      _budget = budgetAmount;
+
       // Listen for transaction changes for the selected month
       _transactionService.getTransactionsByMonth(currentMonth)
-          .listen((transactions) {
+          .listen((transactions) async {
             if (!mounted) return;
             
             // Calculate financial summary
@@ -147,6 +160,41 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
             // Take the 5 most recent
             final recentTransactions = transactions.take(5).toList();
 
+            // Build historical and forecast points
+            final nowDate = DateTime(now.year, now.month, now.day);
+            final Map<DateTime, double> dailyNet = {};
+            for (final tx in transactions) {
+              final d = DateTime(tx.date.year, tx.date.month, tx.date.day);
+              dailyNet[d] = (dailyNet[d] ?? 0) + (tx.isExpense ? -tx.amount.abs() : tx.amount.abs());
+            }
+            double runningBalance = 0;
+            final List<CashFlowPoint> hist = [];
+            for (int i = 0; i <= nowDate.day - 1; i++) {
+              final dayDate = DateTime(now.year, now.month, i + 1);
+              runningBalance += dailyNet[dayDate] ?? 0;
+              hist.add(CashFlowPoint(date: dayDate, balance: runningBalance, income: _income, expenses: _expenses));
+            }
+            // Fetch upcoming bills for projection
+            final upcomingBills = await _transactionService.getUpcomingBills(limit: 30);
+            final Map<DateTime, double> futureBills = {};
+            for (final bill in upcomingBills) {
+              final d = DateTime(bill.date.year, bill.date.month, bill.date.day);
+              futureBills[d] = (futureBills[d] ?? 0) + bill.amount.abs();
+            }
+
+            // simple forecast: use avg daily net plus upcoming bills (expenses) adjustment
+            final avgNet = hist.isNotEmpty ? hist.last.balance / hist.length : 0.0;
+            final List<CashFlowPoint> forecast = [];
+            double projBalance = runningBalance;
+            for (int i = nowDate.day; i < DateTime(now.year, now.month + 1, 0).day; i++) {
+              final futureDate = DateTime(now.year, now.month, i + 1);
+              projBalance += avgNet;
+              // subtract scheduled bills on this day
+              final expenseToday = futureBills[futureDate] ?? 0;
+              projBalance -= expenseToday;
+              forecast.add(CashFlowPoint(date: futureDate, balance: projBalance, income: 0, expenses: 0));
+            }
+
             // Update state with calculated values
             setState(() {
               _income = income;
@@ -154,6 +202,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
               _balance = income - expenses;
               _categoryTotals = categoryTotals;
               _recentTransactions = recentTransactions;
+              _historicalCashFlow = hist;
+              _forecastCashFlow = forecast;
               _isLoading = false;
             });
           }, onError: (error) {
@@ -213,65 +263,13 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         ],
       ),
       drawer: AppNavigationDrawer(
-        selectedIndex: 0, // Changed currentIndex to selectedIndex
+        selectedIndex: 0,
         onItemSelected: (index) {
-          String? routeName;
-          switch (index) {
-            case 0: // Dashboard
-              routeName = AppConstants.dashboardRoute; // Note: Dashboard route in AppConstants is '/dashboard', but '/' is typical for home.
-                                                  // Assuming '/' is correct for the main dashboard screen as per previous logic.
-              if (ModalRoute.of(context)?.settings.name == AppConstants.dashboardRoute) {
-                routeName = null; // Avoid navigation if already on /dashboard
-              } else if (ModalRoute.of(context)?.settings.name == '/') {
-                routeName = null; // Avoid navigation if already on /
-              } else {
-                routeName = '/'; // Default to '/' if not on /dashboard or /
-              }
-              break;
-            case 1: // Expenses
-              routeName = AppConstants.expensesRoute;
-              break;
-            case 2: // Goals
-              routeName = AppConstants.goalsRoute; // Corrected from '/enhanced-goals' to use constant
-              break;
-            case 3: // Reports
-              routeName = AppConstants.reportsRoute;
-              break;
-            case 4: // Family
-              routeName = AppConstants.familyRoute;
-              break;
-            case 5: // Settings
-              routeName = AppConstants.settingsRoute;
-              break;
-            case 6: // Income
-              routeName = AppConstants.incomeRoute;
-              break;
-            case 7: // Budgets
-              routeName = AppConstants.budgetsRoute;
-              break;
-            case 8: // Loans
-              routeName = AppConstants.loansRoute;
-              break;
-            case 9: // AI Insights
-              routeName = AppConstants.insightsRoute;
-              break;
-            case 10: // Spending Heatmap
-              routeName = AppConstants.spendingHeatmapRoute;
-              break;
-            case 11: // Challenges
-              routeName = AppConstants.spendingChallengesRoute;
-              break;
-            case 12: // Profile
-              routeName = AppConstants.profileRoute;
-              break;
-            default:
-              break;
-          }
-
-          if (routeName != null && routeName != ModalRoute.of(context)?.settings.name) {
-            Navigator.pushReplacementNamed(context, routeName);
-          } else if (routeName != null) {
-            Navigator.pop(context); // Close drawer if already on the page
+          String route = NavigationService.routeForDrawerIndex(index);
+          
+          if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+          if (ModalRoute.of(context)?.settings.name != route) {
+            NavigationService.navigateToReplacement(route);
           }
         },
       ),
@@ -322,6 +320,12 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
               isRefreshing: _isRefreshing,
             ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
             const SizedBox(height: 24),
+            // Financial health donut (income vs expenses)
+            FinancialHealthDonut(
+              income: _income,
+              expenses: _expenses,
+            ).animate().fadeIn(delay: 300.ms, duration: 400.ms),
+            const SizedBox(height: 24),
             // Recent transactions
             _buildRecentTransactionsSection(), // This already has its own .animate().fadeIn()
             const SizedBox(height: 24),
@@ -331,17 +335,25 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                 onActionSelected: (action) {
                   switch (action) {
                     case 'add_expense':
-                    case 'add_income':
-                      Navigator.pushNamed(context, '/add_transaction');
-                      break;
+                       Navigator.pushNamed(context, '/add_transaction', arguments: {'type': 'expense'});
+                       break;
+                     case 'add_income':
+                       Navigator.pushNamed(context, '/add_transaction', arguments: {'type': 'income'});
+                       break;
                     case 'new_bill':
-                      Navigator.pushNamed(context, '/add_bill');
+                      NavigationService.navigateTo(AppConstants.addBillRoute);
                       break;
                     case 'new_goal':
-                      Navigator.pushNamed(context, '/add_goal');
+                      NavigationService.navigateTo(AppConstants.addGoalRoute);
                       break;
-                    default:
-                      break;
+                    case 'transfer':
+                       NavigationService.navigateTo(AppConstants.transferRoute);
+                       break;
+                     case 'new_budget':
+                       NavigationService.navigateTo(AppConstants.addBudgetRoute);
+                       break;
+                     default:
+                       break;
                   }
                 },
                 onPayeeSelected: (payee) {
@@ -358,6 +370,21 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
             const SpendingTrendChart().animate().fadeIn(delay: 600.ms, duration: 500.ms),
             const UpcomingBillsCard().animate().fadeIn(delay: 700.ms, duration: 500.ms),
             _buildSpendingByCategory().animate().fadeIn(delay: 800.ms, duration: 500.ms),
+            const SizedBox(height: 24),
+            // Cash Flow Forecast
+            CashFlowForecastCard(
+              historicalData: _historicalCashFlow,
+              forecastData: _forecastCashFlow,
+              isLoading: _isLoading,
+              onViewDetails: () => Navigator.pushNamed(context, '/cash_flow_forecast'),
+            ).animate().fadeIn(delay: 820.ms, duration: 500.ms),
+            const SizedBox(height: 24),
+            // Monthly budget progress bar (moved)
+            BudgetProgressBar(
+              budget: _budget,
+              spent: _expenses,
+              title: 'Budget Progress',
+            ).animate().fadeIn(delay: 850.ms, duration: 400.ms),
             const SizedBox(height: 70), // Space for FAB
           ],
         ),

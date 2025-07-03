@@ -19,6 +19,12 @@ class AppConstants {
   static const String spendingHeatmapRoute = '/spending-heatmap';
   static const String spendingChallengesRoute = '/spending-challenges';
   static const String transactionDetailsRoute = '/transaction-details';
+  // Quick action routes
+  static const String addTransactionRoute = '/add_transaction';
+  static const String addBillRoute = '/add_bill';
+  static const String addGoalRoute = '/add_goal';
+  static const String addBudgetRoute = '/add_budget';
+  static const String transferRoute = '/transfer';
   static const String scheduledPaymentsRoute = '/scheduled-payments';
   
   // Transaction categories

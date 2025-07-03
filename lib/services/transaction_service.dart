@@ -335,7 +335,77 @@ class TransactionService {
       return [];
     }
   }
-  
+
+  // Get total spending per month for the last [numberOfMonths] months.
+  // Returns a map where keys are 'MMM yyyy' and values are absolute expense totals (positive numbers).
+  Future<Map<String, double>> getMonthlySpendingHistory({int? numberOfMonths}) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) {
+      _logger.warning('No authenticated user found');
+      return {};
+    }
+
+    DateTime? start;
+    if (numberOfMonths != null && numberOfMonths > 0) {
+      final now = DateTime.now();
+      start = DateTime(now.year, now.month - (numberOfMonths - 1), 1);
+    }
+
+    try {
+      var queryRef = _transactionsCollection.where('userId', isEqualTo: uid);
+      if (start != null) {
+        queryRef = queryRef.where('date', isGreaterThanOrEqualTo: start);
+      }
+      final query = await queryRef.get();
+
+      if (query.docs.isEmpty) return {};
+
+      // Prepare result map
+      final Map<String, double> totals = {}; 
+      if (start != null) {
+        // Pre-fill months if a range was specified
+        for (int i = 0; i < numberOfMonths!; i++) {
+          final monthDate = DateTime(start.year, start.month + i, 1);
+          totals[DateFormat('MMM yyyy').format(monthDate)] = 0.0;
+        }
+      }
+
+      for (final doc in query.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final typeStr = data['type']?.toString() ?? '';
+        if (!typeStr.contains('expense')) continue; // only expenses
+        double amount = (data['amount'] as num).toDouble().abs();
+
+        // Parse stored timestamp
+        DateTime txDate;
+        final raw = data['date'];
+        if (raw is Timestamp) {
+          txDate = raw.toDate();
+        } else if (raw is int) {
+          txDate = DateTime.fromMillisecondsSinceEpoch(raw > 1000000000000 ? raw : raw * 1000);
+        } else {
+          txDate = DateTime.parse(raw.toString());
+        }
+
+        final label = DateFormat('MMM yyyy').format(DateTime(txDate.year, txDate.month, 1));
+        if (totals.containsKey(label)) {
+          totals[label] = (totals[label] ?? 0) + amount;
+        }
+      }
+
+      // If no predefined months (all-time), sort the keys chronologically
+      if (start == null) {
+        final sortedEntries = totals.entries.toList()
+          ..sort((a, b) => DateFormat('MMM yyyy').parse(a.key).compareTo(DateFormat('MMM yyyy').parse(b.key)));
+        return { for (var e in sortedEntries) e.key : e.value };
+      }
+      return totals;
+    } catch (e) {
+      _logger.severe('Error computing monthly spending history: $e');
+      return {};
+    }
+  }
+
   // Get total income for a specific month
   Future<double> getTotalIncome(DateTime month) async {
     if (_userId == null) {
@@ -455,51 +525,9 @@ class TransactionService {
     }
   }
 
-  Future<Map<String, double>> getMonthlySpendingHistory({int numberOfMonths = 6}) async {
-    if (_userId == null) {
-      _logger.warning('User not authenticated, cannot fetch monthly spending history.');
-      return {};
-    }
 
-    Map<String, double> monthlyExpenses = {};
-    DateTime now = DateTime.now();
+   
 
-    for (int i = 0; i < numberOfMonths; i++) {
-      int year = now.year;
-      int month = now.month - i;
-      while (month <= 0) {
-        month += 12;
-        year -= 1;
-      }
-
-      DateTime startDate = DateTime(year, month, 1);
-      DateTime endDate = DateTime(year, month + 1, 0);
-      final String monthKey = DateFormat('MMM yyyy').format(startDate);
-
-      try {
-        final querySnapshot = await _transactionsCollection
-            .where('userId', isEqualTo: _userId)
-            .where('type', isEqualTo: 'expense')
-            .where('date', isGreaterThanOrEqualTo: startDate.toIso8601String().substring(0, 10))
-            .where('date', isLessThanOrEqualTo: endDate.toIso8601String().substring(0, 10))
-            .get();
-
-        double totalForMonth = 0;
-        for (var doc in querySnapshot.docs) {
-          final transaction = models.Transaction.fromFirestore(doc.data() as DocumentSnapshot<Map<String, dynamic>>, doc.id as SnapshotOptions?);
-          totalForMonth += transaction.amount;
-        }
-        monthlyExpenses[monthKey] = totalForMonth;
-      } catch (e) {
-        _logger.severe('Error fetching monthly spending for $monthKey: $e');
-        monthlyExpenses[monthKey] = 0;
-      }
-    }
-
-    var sortedKeys = monthlyExpenses.keys.toList().reversed.toList();
-    Map<String, double> sortedMap = { for (var k in sortedKeys) k : monthlyExpenses[k]! };
-    return sortedMap;
-  }
 
   Future<List<models.Transaction>> getUpcomingBills({int limit = 5}) async {
     if (_userId == null) {

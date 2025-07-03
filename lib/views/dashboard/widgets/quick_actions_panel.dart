@@ -97,7 +97,7 @@ class _QuickActionsPanelState extends State<QuickActionsPanel> with SingleTicker
             indicatorSize: TabBarIndicatorSize.label,
           ),
           SizedBox(
-            height: 150,
+            height: 300,
             child: TabBarView(
               controller: _tabController,
               children: [
@@ -105,13 +105,14 @@ class _QuickActionsPanelState extends State<QuickActionsPanel> with SingleTicker
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: GridView.builder(
+                    shrinkWrap: true,
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3,
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
                       childAspectRatio: 1.2,
                     ),
-                    physics: const NeverScrollableScrollPhysics(),
+                    
                     itemCount: quickActions.length,
                     itemBuilder: (context, index) {
                       final action = quickActions[index];

@@ -13,6 +13,10 @@ import 'package:financeflow_app/views/insights/insights_screen.dart';
 import 'package:financeflow_app/views/profile/profile_screen.dart';
 import 'package:financeflow_app/views/auth/sign_in_screen.dart';
 import 'package:financeflow_app/views/add_transaction/add_transaction_screen.dart';
+import 'package:financeflow_app/views/bills/add_bill_screen.dart';
+import 'package:financeflow_app/views/budgets/add_budget_screen.dart';
+import 'package:financeflow_app/views/goals/add_goal_screen.dart';
+import 'package:financeflow_app/views/transfer/transfer_screen.dart';
 
 class NavigationService {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -105,12 +109,22 @@ class NavigationService {
         return MaterialPageRoute(builder: (_) => const BudgetsScreen());
       case AppConstants.goalsRoute:
         return MaterialPageRoute(builder: (_) => const GoalsScreen());
+      case '/enhanced-goals':
+        return MaterialPageRoute(builder: (_) => const GoalsScreen());
       case AppConstants.reportsRoute:
         return MaterialPageRoute(builder: (_) => const ReportsScreen());
       case AppConstants.familyRoute:
         return MaterialPageRoute(builder: (_) => const FamilyScreen());
       case AppConstants.settingsRoute:
         return MaterialPageRoute(builder: (_) => const SettingsScreen());
+      case AppConstants.addBillRoute:
+        return MaterialPageRoute(builder: (_) => const AddBillScreen());
+      case AppConstants.addGoalRoute:
+        return MaterialPageRoute(builder: (_) => const AddGoalScreen());
+      case AppConstants.addBudgetRoute:
+        return MaterialPageRoute(builder: (_) => const AddBudgetScreen());
+      case AppConstants.transferRoute:
+        return MaterialPageRoute(builder: (_) => const TransferScreen());
       case AppConstants.insightsRoute:
         return MaterialPageRoute(builder: (_) => const InsightsScreen());
       case AppConstants.profileRoute:

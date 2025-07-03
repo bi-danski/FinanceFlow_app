@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../models/spending_heatmap_model.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/app_navigation_drawer.dart';
+import '../../services/navigation_service.dart';
 import '../../widgets/analytics/enhanced_filter_dialog.dart';
 
 class SpendingHeatmapScreen extends StatefulWidget {
@@ -16,7 +17,7 @@ class SpendingHeatmapScreen extends StatefulWidget {
 }
 
 class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
-  int _selectedIndex = 3; // Reports index in the drawer
+  int _selectedIndex = 10; // Heatmap index in the drawer
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
   CalendarFormat _calendarFormat = CalendarFormat.month;
@@ -161,9 +162,17 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
   }
   
   void _onItemSelected(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
+
+    final String route = NavigationService.routeForDrawerIndex(index);
+
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+
+    if (ModalRoute.of(context)?.settings.name != route) {
+      NavigationService.navigateToReplacement(route);
+    }
   }
 
   @override

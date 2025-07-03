@@ -9,7 +9,7 @@ import '../../viewmodels/budget_viewmodel.dart';
 import '../../widgets/app_navigation_drawer.dart';
 import '../../themes/app_theme.dart';
 import '../../services/navigation_service.dart';
-import '../../constants/app_constants.dart';
+
 import 'budget_form_screen.dart';
 import 'widgets/budget_card.dart';
 
@@ -36,68 +36,20 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
   }
 
   void _onItemSelected(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    // Map drawer index to route names
-    late String route;
-    switch (index) {
-      case 0:
-        route = AppConstants.dashboardRoute;
-        break;
-      case 1:
-        route = AppConstants.expensesRoute;
-        break;
-      case 2:
-        route = '/enhanced-goals';
-        break;
-      case 3:
-        route = AppConstants.reportsRoute;
-        break;
-      case 4:
-        route = AppConstants.familyRoute;
-        break;
-      case 5:
-        route = AppConstants.settingsRoute;
-        break;
-      case 6:
-        route = AppConstants.incomeRoute;
-        break;
-      case 7:
-        route = AppConstants.budgetsRoute; // current screen
-        break;
-      case 8:
-        route = AppConstants.loansRoute;
-        break;
-      case 9:
-        route = AppConstants.insightsRoute;
-        break;
-      case 10:
-        route = AppConstants.spendingHeatmapRoute;
-        break;
-      case 11:
-        route = AppConstants.spendingChallengesRoute;
-        break;
-      case 12:
-        route = AppConstants.profileRoute;
-        break;
-      default:
-        route = AppConstants.dashboardRoute;
-    }
+    setState(() => _selectedIndex = index);
 
-    // Close the drawer if open
+    String route = NavigationService.routeForDrawerIndex(index);
+
+    // Close drawer if open
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     }
 
-    // Only navigate if not already on the target route
-    final currentRoute = ModalRoute.of(context)?.settings.name;
-    if (currentRoute != route) {
+    // Navigate only if not already on target route
+    if (ModalRoute.of(context)?.settings.name != route) {
       NavigationService.navigateToReplacement(route);
     }
-
   }
-
   @override
   Widget build(BuildContext context) {
     final budgetViewModel = Provider.of<BudgetViewModel>(context);

@@ -94,8 +94,8 @@ class _IncomeScreenState extends State<IncomeScreen> {
         },
         backgroundColor: AppTheme.incomeColor,
         foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
         tooltip: 'Add Income Source',
+        child: const Icon(Icons.add),
       ),
     );
   }

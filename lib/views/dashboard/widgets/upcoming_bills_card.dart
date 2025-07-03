@@ -1,9 +1,9 @@
-import 'package:financeflow_app/services/transaction_service.dart';
+import 'package:provider/provider.dart';
+import 'package:financeflow_app/viewmodels/bill_viewmodel.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import 'package:financeflow_app/utils/formatters.dart'; // Assuming you have formatters here
-import 'package:financeflow_app/models/transaction_model.dart' as models;
+import 'package:financeflow_app/models/bill_model.dart';
 import 'package:financeflow_app/constants/app_constants.dart'; // For routes
 
 class UpcomingBillsCard extends StatefulWidget {
@@ -14,22 +14,22 @@ class UpcomingBillsCard extends StatefulWidget {
 }
 
 class _UpcomingBillsCardState extends State<UpcomingBillsCard> {
-  late Future<List<models.Transaction>> _upcomingBillsFuture;
-  TransactionService? _transactionService;
+  late Future<List<Bill>> _upcomingBillsFuture;
+  BillViewModel? _billViewModel;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final ts = Provider.of<TransactionService>(context, listen: false);
-    if (_transactionService != ts) {
-      _transactionService = ts;
-      _upcomingBillsFuture = _transactionService!.getUpcomingBills(limit: 3);
+    final vm = Provider.of<BillViewModel>(context, listen: false);
+    if (_billViewModel != vm) {
+      _billViewModel = vm;
+      _upcomingBillsFuture = _billViewModel!.getUpcomingBills(limit: 3);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<models.Transaction>>(
+    return FutureBuilder<List<Bill>>(
       future: _upcomingBillsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -108,14 +108,14 @@ class _UpcomingBillsCardState extends State<UpcomingBillsCard> {
                   itemCount: bills.length,
                   itemBuilder: (context, index) {
                     final bill = bills[index];
-                    final dueDate = bill.date;
+                    final dueDate = bill.dueDate;
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: CircleAvatar(
                         backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
                         child: Icon(Icons.receipt_long, color: Theme.of(context).colorScheme.onSecondaryContainer),
                       ),
-                      title: Text(bill.title, style: const TextStyle(fontWeight: FontWeight.w500)),
+                      title: Text(bill.name, style: const TextStyle(fontWeight: FontWeight.w500)),
                       subtitle: Text('Due: ${DateFormat('MMM d, yyyy').format(dueDate)}'),
                       trailing: Text(
                         Formatters.formatCurrency(bill.amount, context),
