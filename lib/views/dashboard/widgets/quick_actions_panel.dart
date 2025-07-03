@@ -36,38 +36,38 @@ class _QuickActionsPanelState extends State<QuickActionsPanel> with SingleTicker
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> quickActions = [
       {
-        'icon': Icons.add_circle_outline,
-        'color': Colors.green,
+        'icon': Icons.shopping_cart_outlined,
+        'color': Colors.redAccent,
         'label': 'Add Expense',
         'action': 'add_expense',
       },
       {
-        'icon': Icons.arrow_upward,
-        'color': Colors.blue,
+        'icon': Icons.attach_money,
+        'color': Colors.green,
         'label': 'Add Income',
         'action': 'add_income',
       },
       {
-        'icon': Icons.account_balance_wallet_outlined,
-        'color': Colors.purple,
+        'icon': Icons.compare_arrows,
+        'color': Colors.indigo,
         'label': 'Transfer',
         'action': 'transfer',
       },
       {
-        'icon': Icons.list_alt,
+        'icon': Icons.pie_chart_outline,
         'color': Colors.orange,
         'label': 'New Budget',
         'action': 'new_budget',
       },
       {
-        'icon': Icons.flag_outlined,
+        'icon': Icons.flag,
         'color': Colors.teal,
         'label': 'New Goal',
         'action': 'new_goal',
       },
       {
-        'icon': Icons.receipt_long_outlined,
-        'color': Colors.indigo,
+        'icon': Icons.receipt_long,
+        'color': Colors.brown,
         'label': 'New Bill',
         'action': 'new_bill',
       },
