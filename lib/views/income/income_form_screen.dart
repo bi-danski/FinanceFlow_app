@@ -91,9 +91,8 @@ class _IncomeFormScreenState extends State<IncomeFormScreen> {
           notes: _notesController.text.isEmpty ? null : _notesController.text,
         );
         
-        final success = await incomeViewModel.addIncomeSource(incomeSource);
-        
-        if (success) {
+        await incomeViewModel.addIncomeSource(incomeSource);
+        if (mounted) {
           if (mounted) {
             Navigator.pop(context, true); // Return success
           }
@@ -129,9 +128,9 @@ class _IncomeFormScreenState extends State<IncomeFormScreen> {
 
     try {
       final incomeViewModel = Provider.of<IncomeViewModel>(context, listen: false);
-      final success = await incomeViewModel.deleteIncomeSource(widget.incomeSource!.id!);
-      
-      if (success) {
+      final id = widget.incomeSource!.id!;
+      await incomeViewModel.deleteIncomeSource(id);
+      if (mounted) {
         if (mounted) {
           Navigator.pop(context, 'deleted'); // Return deleted status
         }

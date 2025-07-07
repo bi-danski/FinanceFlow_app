@@ -277,7 +277,6 @@ class RealtimeDataService extends ChangeNotifier {
           try {
             final loans = snapshot.docs.map((doc) {
               final data = doc.data() as Map<String, dynamic>;
-              data['id'] = int.tryParse(doc.id) ?? 0;
               return Loan.fromMap(data);
             }).toList();
             
@@ -291,6 +290,70 @@ class RealtimeDataService extends ChangeNotifier {
           _logger.severe('Error in loans stream: $error');
           _loansController.addError(error);
         });
+  }
+
+  /// Sync income sources with Firestore
+  Future<void> syncIncomeSources(List<IncomeSource> sources) async {
+    try {
+      final userId = _auth.currentUser?.uid;
+      if (userId == null) {
+        throw Exception('No authenticated user');
+      }
+
+      // Get existing documents
+      final existingDocs = await _incomeSourcesCollection
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      // Map of existing IDs to documents
+      final existingMap = Map<String, DocumentSnapshot>.fromEntries(
+        existingDocs.docs.map((doc) => MapEntry(doc.id, doc)),
+      );
+
+      // Process each source
+      for (final source in sources) {
+        final docId = source.id?.toString();
+        if (docId == null || !existingMap.containsKey(docId)) {
+          // New source - add to Firestore
+          await _incomeSourcesCollection.add({
+            'userId': userId,
+            'name': source.name,
+            'type': source.type,
+            'amount': source.amount,
+            'date': source.date,
+            'isRecurring': source.isRecurring,
+            'frequency': source.frequency,
+            'notes': source.notes,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        } else {
+          // Existing source - update in Firestore
+          await existingMap[docId]!.reference.update({
+            'name': source.name,
+            'type': source.type,
+            'amount': source.amount,
+            'date': source.date,
+            'isRecurring': source.isRecurring,
+            'frequency': source.frequency,
+            'notes': source.notes,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+
+      // Remove any documents that no longer exist in the local list
+      for (final doc in existingDocs.docs) {
+        final docId = doc.id;
+        if (!sources.any((s) => s.id?.toString() == docId)) {
+          await doc.reference.delete();
+        }
+      }
+
+      _logger.info('Successfully synced ${sources.length} income sources');
+    } catch (e) {
+      _logger.severe('Error syncing income sources: $e');
+      rethrow;
+    }
   }
   
   /// Cancel all stream subscriptions but keep controllers open

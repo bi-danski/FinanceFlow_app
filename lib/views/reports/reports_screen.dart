@@ -4,9 +4,11 @@ import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 import '../../viewmodels/transaction_viewmodel_fixed.dart';
+import '../../models/transaction_model.dart' as app_models;
 import '../../widgets/app_navigation_drawer.dart';
 import '../../services/navigation_service.dart';
 import '../../themes/app_theme.dart';
+import '../../viewmodels/budget_viewmodel.dart';
 import 'widgets/report_card.dart';
 import 'widgets/report_period_selector.dart';
 
@@ -87,20 +89,52 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildIncomeVsExpensesCard() {
-    return ReportCard(
-      title: 'Income vs Expenses',
-      child: SizedBox(
-        height: 250,
-        child: _buildIncomeExpensesChart(),
-      ),
+    return Consumer<TransactionViewModel>(
+      builder: (context, viewModel, _) {
+        if (viewModel.isLoading) {
+          return const ReportCard(
+            title: 'Income vs Expenses',
+            child: SizedBox(
+              height: 120,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
+
+        double income = 0;
+        double expenses = 0;
+        for (final tx in viewModel.transactions) {
+          if (tx.type == app_models.TransactionType.income) {
+            income += tx.amount;
+          } else if (tx.type == app_models.TransactionType.expense) {
+            expenses += tx.amount;
+          }
+        }
+        final balance = income - expenses;
+
+        // Empty-state
+        if (income == 0 && expenses == 0) {
+          return const ReportCard(
+            title: 'Income vs Expenses',
+            child: SizedBox(
+              height: 120,
+              child: Center(child: Text('No transactions for selected period.')),
+            ),
+          );
+        }
+
+        return ReportCard(
+          title: 'Income vs Expenses',
+          child: SizedBox(
+            height: 250,
+            child: _buildIncomeExpensesChart(income, expenses, balance),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildIncomeExpensesChart() {
-    // Mock data for the chart
-    final income = 4850.0;
-    final expenses = 3210.0;
-    final balance = income - expenses;
+  Widget _buildIncomeExpensesChart(double income, double expenses, double balance) {
     final _ = NumberFormat.currency(symbol: '\$');
     
     return Row(
@@ -229,25 +263,49 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildCategoryBreakdownCard() {
-    return ReportCard(
-      title: 'Spending by Category',
-      child: SizedBox(
-        height: 250,
-        child: _buildCategoryChart(),
-      ),
+    return Consumer<TransactionViewModel>(
+      builder: (context, viewModel, _) {
+        if (viewModel.isLoading) {
+          return const ReportCard(
+            title: 'Spending by Category',
+            child: SizedBox(
+              height: 120,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
+
+        // Aggregate expense totals by category
+        final Map<String, double> categoryTotals = {};
+        for (final tx in viewModel.transactions) {
+          if (tx.type == app_models.TransactionType.expense) {
+            categoryTotals.update(tx.category, (value) => value + tx.amount, ifAbsent: () => tx.amount);
+          }
+        }
+
+        if (categoryTotals.isEmpty) {
+          return const ReportCard(
+            title: 'Spending by Category',
+            child: SizedBox(
+              height: 120,
+              child: Center(child: Text('No expense data for selected period.')),
+            ),
+          );
+        }
+
+        return ReportCard(
+          title: 'Spending by Category',
+          child: SizedBox(
+            height: 250,
+            child: _buildCategoryChart(categoryTotals),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildCategoryChart() {
-    // Mock data for the chart
-    final Map<String, double> categoryData = {
-      'Food': 450.0,
-      'Transport': 180.0,
-      'Shopping': 320.0,
-      'Bills': 550.0,
-      'Entertainment': 200.0,
-      'Other': 100.0,
-    };
+  Widget _buildCategoryChart(Map<String, double> categoryData) {
+
     
     final totalSpending = categoryData.values.fold(0.0, (sum, value) => sum + value);
     
@@ -322,34 +380,63 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildMonthlyTrendCard() {
-    return ReportCard(
-      title: 'Monthly Trend',
-      child: SizedBox(
-        height: 250,
-        child: _buildMonthlyTrendChart(),
-      ),
+    return Consumer<TransactionViewModel>(
+      builder: (context, viewModel, _) {
+        if (viewModel.isLoading) {
+          return const ReportCard(
+            title: 'Monthly Trend',
+            child: SizedBox(
+              height: 120,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
+
+        // Group transactions by day-of-month
+        final Map<int, double> incomeByDay = {};
+        final Map<int, double> expenseByDay = {};
+        for (final tx in viewModel.transactions) {
+          final day = tx.date.day;
+          if (tx.type == app_models.TransactionType.income) {
+            incomeByDay.update(day, (v) => v + tx.amount, ifAbsent: () => tx.amount);
+          } else if (tx.type == app_models.TransactionType.expense) {
+            expenseByDay.update(day, (v) => v + tx.amount, ifAbsent: () => tx.amount);
+          }
+        }
+
+        if (incomeByDay.isEmpty && expenseByDay.isEmpty) {
+          return const ReportCard(
+            title: 'Monthly Trend',
+            child: SizedBox(
+              height: 120,
+              child: Center(child: Text('No data for selected month.')),
+            ),
+          );
+        }
+
+        // Convert to FlSpot sorted by day
+        final incomeSpots = incomeByDay.entries
+            .map((e) => FlSpot(e.key.toDouble(), e.value))
+            .toList()
+          ..sort((a, b) => a.x.compareTo(b.x));
+        final expenseSpots = expenseByDay.entries
+            .map((e) => FlSpot(e.key.toDouble(), e.value))
+            .toList()
+          ..sort((a, b) => a.x.compareTo(b.x));
+
+        return ReportCard(
+          title: 'Monthly Trend',
+          child: SizedBox(
+            height: 250,
+            child: _buildMonthlyTrendChart(incomeSpots, expenseSpots),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildMonthlyTrendChart() {
-    // Mock data for the chart
-    final List<FlSpot> incomeSpots = [
-      FlSpot(0, 4200),
-      FlSpot(1, 4500),
-      FlSpot(2, 4300),
-      FlSpot(3, 4800),
-      FlSpot(4, 4600),
-      FlSpot(5, 4850),
-    ];
-    
-    final List<FlSpot> expenseSpots = [
-      FlSpot(0, 3100),
-      FlSpot(1, 3400),
-      FlSpot(2, 3200),
-      FlSpot(3, 3500),
-      FlSpot(4, 3300),
-      FlSpot(5, 3210),
-    ];
+  Widget _buildMonthlyTrendChart(List<FlSpot> incomeSpots, List<FlSpot> expenseSpots) {
+
     
     return LineChart(
       LineChartData(
@@ -447,26 +534,55 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildBudgetPerformanceCard() {
-    return ReportCard(
-      title: 'Budget Performance',
-      child: SizedBox(
-        height: 250,
-        child: _buildBudgetPerformanceChart(),
-      ),
+    return Consumer2<TransactionViewModel, BudgetViewModel>(
+      builder: (context, txVm, budgetVm, _) {
+        if (txVm.isLoading || budgetVm.isLoading) {
+          return const ReportCard(
+            title: 'Budget Performance',
+            child: SizedBox(
+              height: 120,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
+
+        // Map category -> spent
+        final Map<String, double> spentByCategory = {};
+        for (final tx in txVm.transactions) {
+          if (tx.type == app_models.TransactionType.expense) {
+            spentByCategory.update(tx.category, (v) => v + tx.amount, ifAbsent: () => tx.amount);
+          }
+        }
+
+        // Build data combining with budgets
+        final Map<String, List<double>> budgetData = {};
+        for (final budget in budgetVm.budgets) {
+          final spent = spentByCategory[budget.category] ?? 0.0;
+          budgetData[budget.category] = [spent, budget.amount];
+        }
+
+        if (budgetData.isEmpty) {
+          return const ReportCard(
+            title: 'Budget Performance',
+            child: SizedBox(
+              height: 120,
+              child: Center(child: Text('No budgets set.')),
+            ),
+          );
+        }
+
+        return ReportCard(
+          title: 'Budget Performance',
+          child: SizedBox(
+            height: 250,
+            child: _buildBudgetPerformanceChart(budgetData),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildBudgetPerformanceChart() {
-    // Mock data for the chart
-    final Map<String, List<double>> budgetData = {
-      'Food': [450.0, 500.0],
-      'Transport': [180.0, 250.0],
-      'Shopping': [320.0, 300.0],
-      'Bills': [550.0, 600.0],
-      'Entertainment': [200.0, 150.0],
-      'Other': [100.0, 200.0],
-    };
-    
+  Widget _buildBudgetPerformanceChart(Map<String, List<double>> budgetData) {
     return BarChart(
       BarChartData(
         alignment: BarChartAlignment.spaceAround,

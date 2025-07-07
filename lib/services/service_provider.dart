@@ -7,14 +7,18 @@ import 'auth_service.dart';
 import 'transaction_service.dart';
 import 'sms_parser_service.dart';
 import 'sms_import_service.dart';
-import '../viewmodels/transaction_viewmodel_fixed.dart';
-import '../viewmodels/budget_viewmodel.dart';
-import '../viewmodels/goal_viewmodel.dart';
-import '../viewmodels/family_viewmodel.dart';
-import '../viewmodels/income_viewmodel.dart';
-import '../viewmodels/loan_viewmodel.dart';
-import '../viewmodels/bill_viewmodel.dart';
-import '../viewmodels/insights_viewmodel.dart';
+import 'package:financeflow_app/viewmodels/transaction_viewmodel_fixed.dart';
+import 'package:financeflow_app/viewmodels/budget_viewmodel.dart';
+import 'package:financeflow_app/viewmodels/goal_viewmodel.dart';
+import 'package:financeflow_app/viewmodels/family_viewmodel.dart';
+import 'package:financeflow_app/viewmodels/income_viewmodel.dart';
+import 'package:financeflow_app/viewmodels/loan_viewmodel.dart';
+import 'package:financeflow_app/viewmodels/challenge_view_model.dart';
+import 'package:financeflow_app/viewmodels/bill_viewmodel.dart';
+import 'package:financeflow_app/viewmodels/insights_viewmodel.dart';
+import 'package:financeflow_app/services/database_service.dart';
+import 'package:financeflow_app/services/firestore_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// A dedicated provider for application services that properly handles lifecycle
 class ServiceProvider {
@@ -61,10 +65,24 @@ class ServiceProvider {
       ChangeNotifierProvider(create: (_) => BudgetViewModel()),
       ChangeNotifierProvider(create: (_) => GoalViewModel()),
       ChangeNotifierProvider(create: (_) => FamilyViewModel()),
-      ChangeNotifierProvider(create: (_) => IncomeViewModel()),
+      ChangeNotifierProvider(
+        create: (_) => IncomeViewModel(
+          databaseService: DatabaseService.instance,
+          firestoreService: FirestoreService.instance,
+          realtimeDataService: realtimeDataService,
+          auth: FirebaseAuth.instance,
+        ),
+      ),
       ChangeNotifierProvider(create: (_) => LoanViewModel()),
       ChangeNotifierProvider(create: (_) => BillViewModel()),
       ChangeNotifierProvider(create: (_) => InsightsViewModel()),
+
+      // Challenge view model
+      ChangeNotifierProvider(
+        create: (_) => ChallengeViewModel(
+          firestoreService: FirestoreService.instance,
+        ),
+      ),
     ];
     
     return providers;

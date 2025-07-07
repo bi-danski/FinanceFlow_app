@@ -22,11 +22,18 @@ class _IncomeScreenState extends State<IncomeScreen> {
   int _selectedIndex = 7; // Income tab selected
   bool _isLoading = false;
   final String _selectedFilter = 'All';
+  final ValueNotifier<DateTime> _selectedMonthNotifier = ValueNotifier(DateTime.now());
 
   @override
   void initState() {
     super.initState();
     _loadIncomeSources();
+  }
+
+  @override
+  void dispose() {
+    _selectedMonthNotifier.dispose();
+    super.dispose();
   }
 
   Future<void> _loadIncomeSources() async {
@@ -36,10 +43,26 @@ class _IncomeScreenState extends State<IncomeScreen> {
       final incomeViewModel = Provider.of<IncomeViewModel>(context, listen: false);
       await incomeViewModel.loadIncomeSources();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading income sources: $e')),
-        );
+      if (e.toString().contains('index')) {
+        // Handle index creation error
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Index creation in progress...'),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+          // Try again after a short delay
+          Future.delayed(const Duration(seconds: 5), _loadIncomeSources);
+        }
+      } else {
+        // Handle other errors
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error loading income sources: $e')),
+          );
+        }
       }
     } finally {
       if (mounted) {
@@ -73,7 +96,40 @@ class _IncomeScreenState extends State<IncomeScreen> {
             );
           }
 
-          return _buildContent(viewModel);
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Text(
+                      'Select Month:',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(width: 8),
+                    ValueListenableBuilder<DateTime>(
+                      valueListenable: _selectedMonthNotifier,
+                      builder: (context, selectedMonth, child) {
+                        return DropdownButton<DateTime>(
+                          value: selectedMonth,
+                          items: _buildMonthDropdownItems(),
+                          onChanged: (DateTime? newValue) {
+                            if (newValue != null) {
+                              _selectedMonthNotifier.value = newValue;
+                              _loadIncomeSources();
+                            }
+                          },
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: _buildContent(viewModel),
+              ),
+            ],
+          );
         },
       ),
       drawer: AppNavigationDrawer(
@@ -98,6 +154,26 @@ class _IncomeScreenState extends State<IncomeScreen> {
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  List<DropdownMenuItem<DateTime>> _buildMonthDropdownItems() {
+    final List<DropdownMenuItem<DateTime>> items = [];
+    
+    // Generate items for the last 12 months including current month
+    DateTime currentDate = DateTime.now();
+    for (int i = 0; i < 12; i++) {
+      final month = DateTime(currentDate.year, currentDate.month - i, 1);
+      items.add(
+        DropdownMenuItem(
+          value: month,
+          child: Text(
+            DateFormat('MMMM yyyy').format(month),
+            style: const TextStyle(fontSize: 16),
+          ),
+        ),
+      );
+    }
+    return items;
   }
 
   Widget _buildContent(IncomeViewModel viewModel) {

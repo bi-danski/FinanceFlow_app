@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
+import 'package:provider/provider.dart';
+
 import '../../models/spending_challenge_model.dart';
+import '../../viewmodels/challenge_view_model.dart';
 import '../../widgets/app_navigation_drawer.dart';
 import '../../services/navigation_service.dart';
+import 'add_challenge_screen.dart';
 
 class SpendingChallengesScreen extends StatefulWidget {
   const SpendingChallengesScreen({super.key});
@@ -15,189 +19,6 @@ class SpendingChallengesScreen extends StatefulWidget {
 class _SpendingChallengesScreenState extends State<SpendingChallengesScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _selectedIndex = 9; // Insights index in the drawer
-  
-  // Sample challenges data
-  final List<SpendingChallenge> _challenges = [
-    SpendingChallenge(
-      title: 'No-Spend Weekend',
-      description: 'Avoid all non-essential spending this weekend',
-      type: ChallengeType.noSpend,
-      difficulty: ChallengeDifficulty.medium,
-      status: ChallengeStatus.active,
-      startDate: DateTime.now().subtract(const Duration(days: 1)),
-      endDate: DateTime.now().add(const Duration(days: 2)),
-      categories: ['Entertainment', 'Dining', 'Shopping'],
-      icon: Icons.weekend,
-      color: Colors.purple,
-      availableBadges: [
-        ChallengeBadge(
-          name: 'Weekend Warrior',
-          description: 'Complete the No-Spend Weekend challenge',
-          icon: Icons.military_tech,
-          unlockThreshold: 1.0,
-        ),
-      ],
-      rules: [
-        ChallengeRule(
-          description: 'No restaurant spending',
-          isSatisfied: true,
-        ),
-        ChallengeRule(
-          description: 'No entertainment spending',
-          isSatisfied: true,
-        ),
-        ChallengeRule(
-          description: 'No shopping',
-          isSatisfied: true,
-        ),
-      ],
-    ),
-    SpendingChallenge(
-      title: 'Coffee Budget',
-      description: 'Limit coffee spending to \$20 this week',
-      type: ChallengeType.budgetLimit,
-      difficulty: ChallengeDifficulty.easy,
-      status: ChallengeStatus.active,
-      startDate: DateTime.now().subtract(const Duration(days: 3)),
-      endDate: DateTime.now().add(const Duration(days: 4)),
-      categories: ['Coffee', 'Dining'],
-      targetAmount: 20.0,
-      currentAmount: 12.50,
-      icon: Icons.coffee,
-      color: Colors.brown,
-      availableBadges: [
-        ChallengeBadge(
-          name: 'Coffee Connoisseur',
-          description: 'Stay within your coffee budget',
-          icon: Icons.coffee_maker,
-          unlockThreshold: 1.0,
-        ),
-      ],
-    ),
-    SpendingChallenge(
-      title: 'Lunch Savings',
-      description: 'Save \$50 by bringing lunch from home',
-      type: ChallengeType.savingsTarget,
-      difficulty: ChallengeDifficulty.medium,
-      status: ChallengeStatus.active,
-      startDate: DateTime.now().subtract(const Duration(days: 7)),
-      endDate: DateTime.now().add(const Duration(days: 14)),
-      categories: ['Food', 'Dining'],
-      targetAmount: 50.0,
-      currentAmount: 27.50,
-      icon: Icons.lunch_dining,
-      color: Colors.green,
-      availableBadges: [
-        ChallengeBadge(
-          name: 'Lunch Master',
-          description: 'Save \$50 on lunch',
-          icon: Icons.savings,
-          unlockThreshold: 0.5,
-        ),
-        ChallengeBadge(
-          name: 'Lunch Champion',
-          description: 'Complete the lunch savings challenge',
-          icon: Icons.emoji_events,
-          unlockThreshold: 1.0,
-        ),
-      ],
-    ),
-    SpendingChallenge(
-      title: 'Daily Expense Tracking',
-      description: 'Track all expenses every day for a week',
-      type: ChallengeType.habitBuilding,
-      difficulty: ChallengeDifficulty.easy,
-      status: ChallengeStatus.active,
-      startDate: DateTime.now().subtract(const Duration(days: 4)),
-      endDate: DateTime.now().add(const Duration(days: 3)),
-      categories: [],
-      icon: Icons.track_changes,
-      color: Colors.blue,
-      availableBadges: [
-        ChallengeBadge(
-          name: 'Tracking Pro',
-          description: 'Track expenses for 7 days straight',
-          icon: Icons.trending_up,
-          unlockThreshold: 1.0,
-        ),
-      ],
-      rules: [
-        ChallengeRule(
-          description: 'Log all expenses each day',
-          isSatisfied: true,
-        ),
-        ChallengeRule(
-          description: 'Categorize all transactions',
-          isSatisfied: true,
-        ),
-        ChallengeRule(
-          description: 'Review daily spending',
-          isSatisfied: true,
-        ),
-      ],
-    ),
-  ];
-  
-  final List<SpendingChallenge> _completedChallenges = [
-    SpendingChallenge(
-      title: 'Grocery Budget',
-      description: 'Stay under \$200 for groceries this month',
-      type: ChallengeType.budgetLimit,
-      difficulty: ChallengeDifficulty.medium,
-      status: ChallengeStatus.completed,
-      startDate: DateTime.now().subtract(const Duration(days: 30)),
-      endDate: DateTime.now().subtract(const Duration(days: 5)),
-      categories: ['Groceries'],
-      targetAmount: 200.0,
-      currentAmount: 185.75,
-      icon: Icons.shopping_cart,
-      color: Colors.orange,
-      availableBadges: [
-        ChallengeBadge(
-          name: 'Budget Shopper',
-          description: 'Complete the grocery budget challenge',
-          icon: Icons.shopping_basket,
-          unlockThreshold: 1.0,
-        ),
-      ],
-      earnedBadges: [
-        ChallengeBadge(
-          name: 'Budget Shopper',
-          description: 'Complete the grocery budget challenge',
-          icon: Icons.shopping_basket,
-          unlockThreshold: 1.0,
-        ),
-      ],
-    ),
-    SpendingChallenge(
-      title: 'No Online Shopping',
-      description: 'Avoid online shopping for two weeks',
-      type: ChallengeType.noSpend,
-      difficulty: ChallengeDifficulty.hard,
-      status: ChallengeStatus.completed,
-      startDate: DateTime.now().subtract(const Duration(days: 30)),
-      endDate: DateTime.now().subtract(const Duration(days: 16)),
-      categories: ['Shopping'],
-      icon: Icons.shopping_bag,
-      color: Colors.red,
-      availableBadges: [
-        ChallengeBadge(
-          name: 'Digital Detox',
-          description: 'Complete the no online shopping challenge',
-          icon: Icons.do_not_disturb,
-          unlockThreshold: 1.0,
-        ),
-      ],
-      earnedBadges: [
-        ChallengeBadge(
-          name: 'Digital Detox',
-          description: 'Complete the no online shopping challenge',
-          icon: Icons.do_not_disturb,
-          unlockThreshold: 1.0,
-        ),
-      ],
-    ),
-  ];
 
   @override
   void initState() {
@@ -244,18 +65,45 @@ class _SpendingChallengesScreenState extends State<SpendingChallengesScreen> wit
         selectedIndex: _selectedIndex,
         onItemSelected: _onItemSelected,
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildChallengesList(_challenges),
-          _buildChallengesList(_completedChallenges),
-        ],
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          _showAddChallengeDialog();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AddChallengeScreen(),
+            ),
+          );
         },
+        backgroundColor: Theme.of(context).colorScheme.primary,
         child: const Icon(Icons.add),
+      ),
+      body: Consumer<ChallengeViewModel>(
+        builder: (context, viewModel, child) {
+          if (viewModel.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (viewModel.error != null) {
+            return Center(
+              child: Text('Error: ${viewModel.error}'),
+            );
+          }
+
+          final activeChallenges = viewModel.challenges
+              .where((c) => c.status == ChallengeStatus.active || c.status == ChallengeStatus.notStarted)
+              .toList();
+          final completedChallenges = viewModel.challenges
+              .where((c) => c.status == ChallengeStatus.completed || c.status == ChallengeStatus.failed)
+              .toList();
+
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              _buildChallengesList(activeChallenges),
+              _buildChallengesList(completedChallenges),
+            ],
+          );
+        },
       ),
     );
   }
@@ -574,37 +422,5 @@ class _SpendingChallengesScreenState extends State<SpendingChallengesScreen> wit
     );
   }
 
-  void _showAddChallengeDialog() {
-    // This would be a form to add a new challenge
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add New Challenge'),
-        content: const SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Form fields would go here
-              Text('Challenge creation form would go here'),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              // Add logic to create a new challenge
-              Navigator.of(context).pop();
-            },
-            child: const Text('Create'),
-          ),
-        ],
-      ),
-    );
-  }
+
 }

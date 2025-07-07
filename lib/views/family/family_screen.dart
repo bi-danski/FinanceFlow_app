@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../viewmodels/family_viewmodel.dart';
+import '../../models/family_member_model.dart';
 
 import '../../widgets/app_navigation_drawer.dart';
 import '../../services/navigation_service.dart';
@@ -14,6 +15,7 @@ import 'widgets/interactive_budget_chart.dart';
 import 'widgets/family_goals_tracker.dart';
 import 'widgets/family_spending_trends.dart';
 import 'widgets/family_member_comparison.dart';
+import 'widgets/role_budget_distribution.dart';
 
 class FamilyScreen extends StatefulWidget {
   const FamilyScreen({super.key});
@@ -29,7 +31,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
   void initState() {
     super.initState();
     final familyViewModel = Provider.of<FamilyViewModel>(context, listen: false);
-    familyViewModel.loadFamilyMembers();
+    familyViewModel.startListening();
   }
 
   void _onItemSelected(int index) {
@@ -108,6 +110,10 @@ class _FamilyScreenState extends State<FamilyScreen> {
               .slideY(begin: 0.1, end: 0),
             const SizedBox(height: 24),
             const FamilySpendingTrends()
+              .animate()
+              .fadeIn(duration: const Duration(milliseconds: 600), delay: const Duration(milliseconds: 200))
+              .slideY(begin: 0.1, end: 0),
+            const RoleBudgetDistribution()
               .animate()
               .fadeIn(duration: const Duration(milliseconds: 600), delay: const Duration(milliseconds: 200))
               .slideY(begin: 0.1, end: 0),
@@ -314,6 +320,8 @@ class _FamilyScreenState extends State<FamilyScreen> {
   void _showAddFamilyMemberDialog() {
     final nameController = TextEditingController();
     final budgetController = TextEditingController();
+    String selectedRole = 'child';
+    final roles = ['parent', 'child'];
     
     showDialog(
       context: context,
@@ -328,6 +336,17 @@ class _FamilyScreenState extends State<FamilyScreen> {
                 decoration: const InputDecoration(
                   labelText: 'Name',
                 ),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: selectedRole,
+                decoration: const InputDecoration(labelText: 'Role'),
+                items: roles
+                    .map((r) => DropdownMenuItem(value: r, child: Text(r[0].toUpperCase() + r.substring(1))))
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null) selectedRole = val;
+                },
               ),
               const SizedBox(height: 16),
               TextField(
@@ -348,8 +367,24 @@ class _FamilyScreenState extends State<FamilyScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
-                // Add family member
+              onPressed: () async {
+                final name = nameController.text.trim();
+                final budgetText = budgetController.text.trim();
+                final suggestedBudget = FamilyMember.rolePresets[selectedRole] ?? 200.0;
+                final budget = double.tryParse(budgetText) ?? suggestedBudget;
+                if (name.isEmpty || budget <= 0) {
+                  // simple validation
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a valid name and budget')),
+                  );
+                  return;
+                }
+
+                final viewModel = Provider.of<FamilyViewModel>(context, listen: false);
+                await viewModel.addFamilyMember(
+                  FamilyMember(name: name, budget: budget, role: selectedRole, avatarPath: ''),
+                );
+                if (!context.mounted) return;
                 Navigator.pop(context);
               },
               child: const Text('Add'),

@@ -1,5 +1,5 @@
 class IncomeSource {
-  final int? id;
+  final dynamic id; // Can be int (SQLite) or String (Firestore)
   final String name;
   final String type; // Salary, Side Hustle, Loan, Grant, etc.
   final double amount;
@@ -61,7 +61,7 @@ class IncomeSource {
 
   factory IncomeSource.fromJson(Map<String, dynamic> json) {
     return IncomeSource(
-      id: json['id'],
+      id: json['id'], // Keep as dynamic to handle both int and String
       name: json['name'],
       type: json['type'],
       amount: json['amount'],

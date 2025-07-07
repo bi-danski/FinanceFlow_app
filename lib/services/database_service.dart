@@ -95,7 +95,6 @@ class DatabaseService {
         await db.rawQuery('SELECT COUNT(*) FROM transactions'),
       );
       if (txnCount == 0) {
-        final now = DateTime.now();
         final mockTransactions = [
           app_models.TransactionModel(
             title: 'Grocery Shopping',
@@ -149,7 +148,6 @@ class DatabaseService {
         await db.rawQuery('SELECT COUNT(*) FROM budgets'),
       );
       if (budgetCount == 0) {
-        final now = DateTime.now();
         final mockBudgets = [
           Budget(
             category: 'Food',
@@ -648,9 +646,7 @@ class DatabaseService {
     _logger.info('Getting all income sources');
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('income_sources');
-    return List.generate(maps.length, (i) {
-      return IncomeSource.fromMap(maps[i]);
-    });
+    return maps.map((map) => IncomeSource.fromMap(map)).toList();
   }
 
   Future<int> insertIncomeSource(IncomeSource incomeSource) async {
@@ -718,30 +714,45 @@ class DatabaseService {
   }
   
   // Family methods
+  /// Fetches family members for the current primary user.
+  ///
+  /// Historically this query used a `primaryUserId` column, but that column is
+  /// no longer present in the `users` table. For now we treat every user whose
+  /// `id` differs from the currently-logged in user as a potential family
+  /// member. If no user is logged in we simply return an empty list.
   Future<List<User>> getFamilyMembers() async {
     _logger.info('Getting family members');
     final db = await database;
     final userId = await getCurrentUserId();
+    // If no primary user is set (e.g. demo / web mode), just return everyone.
+    List<Map<String, dynamic>> maps;
     if (userId == null) {
-      _logger.warning('No current user found');
-      return [];
+      _logger.info('No current user found – returning all users for demo mode');
+      maps = await db.query('users');
+    } else {
+      // Return all users except the primary user.
+      maps = await db.query(
+        'users',
+        where: 'id != ?',
+        whereArgs: [userId],
+      );
     }
-    
-    final List<Map<String, dynamic>> maps = await db.query(
-      'users',
-      where: 'primaryUserId = ?',
-      whereArgs: [userId],
-    );
-    return List.generate(maps.length, (i) {
-      return User.fromMap(maps[i]);
-    });
+
+    return List.generate(maps.length, (i) => User.fromMap(maps[i]));
   }
 
+  /// Inserts a new family member. The previous implementation tried to attach
+  /// a `primaryUserId` which no longer exists in the schema, causing an SQLite
+  /// exception. We instead just insert the new user record.
   Future<int> insertFamilyMember(User familyMember, int primaryUserId) async {
     _logger.info('Inserting family member: ${familyMember.name}');
     final db = await database;
     final userMap = familyMember.toMap();
-    userMap['primaryUserId'] = primaryUserId;
+    // Remove id if zero/null so SQLite auto-generates a new primary key
+    if ((userMap['id'] ?? 0) == 0) {
+      userMap.remove('id');
+    }
+    // The users table does not currently include a primaryUserId column.
     return await db.insert('users', userMap);
   }
 

@@ -3,10 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:logging/logging.dart';
 
 import '../models/transaction_model.dart' as app_models;
+import '../models/family_member_model.dart';
 import '../models/budget_model.dart';
 import '../models/goal_model.dart';
 import '../models/income_source_model.dart';
 import '../models/loan_model.dart';
+import '../models/spending_challenge_model.dart';
 
 /// Firestore database service for FinanceFlow app
 /// Handles cloud database operations for all app data
@@ -36,8 +38,9 @@ class FirestoreService {
     }
   }
 
-  final _logger = Logger('FirestoreService');
+  final Logger _logger = Logger('FirestoreService');
   final firestore.FirebaseFirestore _db = firestore.FirebaseFirestore.instance;
+  final String _primaryUserId = FirebaseAuth.instance.currentUser?.uid ?? 'demo';
   
   // Get current user ID
   String? get _userId => FirebaseAuth.instance.currentUser?.uid;
@@ -49,7 +52,105 @@ class FirestoreService {
   firestore.CollectionReference get _goalsCollection => _db.collection('goals');
   firestore.CollectionReference get _incomeSourcesCollection => _db.collection('income_sources');
   firestore.CollectionReference get _loansCollection => _db.collection('loans');
-  
+  firestore.CollectionReference get _familyMembersCollection => _db.collection('family_members');
+  firestore.CollectionReference get _spendingChallengesCollection => _db.collection('spending_challenges');
+
+  // Income source methods
+  Future<void> addIncomeSource(IncomeSource income) async {
+    try {
+      await _incomeSourcesCollection.add({
+        'userId': _userId,
+        'name': income.name,
+        'type': income.type,
+        'amount': income.amount,
+        'date': income.date,
+        'isRecurring': income.isRecurring,
+        'frequency': income.frequency,
+        'notes': income.notes,
+        'createdAt': firestore.FieldValue.serverTimestamp(),
+      });
+      _logger.info('Added income source: ${income.name}');
+    } catch (e) {
+      _logger.severe('Error adding income source: $e');
+      rethrow;
+    }
+  }
+
+  // Spending Challenge methods
+  Future<void> addChallenge(SpendingChallenge challenge) async {
+    try {
+      final challengeMap = challenge.toMap();
+      challengeMap['userId'] = _userId; // Add userId to the map
+      await _spendingChallengesCollection.doc(challenge.id).set(challengeMap);
+      _logger.info('Added spending challenge: ${challenge.title}');
+    } catch (e) {
+      _logger.severe('Error adding spending challenge: $e');
+      rethrow;
+    }
+  }
+
+  Stream<List<SpendingChallenge>> getChallengesStream() {
+    try {
+      return _spendingChallengesCollection
+          .where('userId', isEqualTo: _userId)
+          .orderBy('start_date', descending: true)
+          .snapshots()
+          .map((snapshot) => snapshot.docs
+              .map((doc) => SpendingChallenge.fromMap(doc.data() as Map<String, dynamic>))
+              .toList());
+    } catch (e) {
+      _logger.severe('Error getting spending challenges stream: $e');
+      return Stream.value([]); // Return an empty stream on error
+    }
+  }
+
+  Stream<List<IncomeSource>> getIncomeSourcesStream() {
+    try {
+      // First try with compound query (requires index)
+      try {
+        return _incomeSourcesCollection
+            .where('userId', isEqualTo: _userId)
+            .orderBy('date', descending: true)
+            .snapshots()
+            .map((snapshot) => snapshot.docs
+                .map((doc) => IncomeSource.fromMap(doc.data() as Map<String, dynamic>))
+                .toList());
+      } catch (e) {
+        // If index error occurs, fall back to alternative query
+        _logger.warning('Index not ready, falling back to alternative query: $e');
+        
+        // Alternative query that doesn't require index
+        return _incomeSourcesCollection
+            .where('userId', isEqualTo: _userId)
+            .snapshots()
+            .map((snapshot) => snapshot.docs
+                .map((doc) => IncomeSource.fromMap(doc.data() as Map<String, dynamic>))
+                .toList());
+      }
+    } catch (e) {
+      _logger.severe('Error getting income sources stream: $e');
+      rethrow;
+    }
+  }
+
+  // Family member methods
+  Future<void> updateFamilyMemberSpending(String userId, int memberId, double amount) async {
+    try {
+      await _familyMembersCollection
+          .doc(userId)
+          .collection('members')
+          .doc(memberId.toString())
+          .update({
+        'spent': amount,
+        'updatedAt': firestore.FieldValue.serverTimestamp(),
+      });
+      _logger.info('Updated spending for family member $memberId');
+    } catch (e) {
+      _logger.severe('Error updating family member spending: $e');
+      rethrow;
+    }
+  }
+
   // User profile methods
   
   /// Create a new user profile in Firestore
@@ -447,6 +548,62 @@ class FirestoreService {
     }
   }
   
+  // Family member methods
+  /// Stream of family members for the given primary user ID
+  Stream<List<FamilyMember>> familyMembersStream(String primaryUserId) {
+    final collection = _usersCollection.doc(primaryUserId).collection('familyMembers');
+    return collection.snapshots().map((snap) => snap.docs.map((doc) {
+          final data = doc.data();
+          data['id'] = doc.id;
+          return FamilyMember.fromMap(data);
+        }).toList());
+  }
+
+  /// Add a family member under the given primary user ID
+  Future<void> addFamilyMember(String primaryUserId, FamilyMember member) async {
+    final collection = _usersCollection.doc(primaryUserId).collection('familyMembers');
+    await collection.add(member.toMap());
+    _logger.info('Family member added for $primaryUserId: ${member.name}');
+  }
+
+  // Allowance request methods
+  Stream<List<Map<String, dynamic>>> allowanceRequestsStream(String familyMemberId) {
+    final collection = _usersCollection.doc(_primaryUserId).collection('familyMembers')
+        .doc(familyMemberId).collection('allowanceRequests');
+    return collection.snapshots().map((snap) => snap.docs.map((doc) {
+      final data = doc.data();
+      data['id'] = doc.id;
+      return data;
+    }).toList());
+  }
+
+  Future<void> createAllowanceRequest(String familyMemberId, {
+    required double amount,
+    required String reason,
+  }) async {
+    final collection = _usersCollection.doc(_primaryUserId).collection('familyMembers')
+        .doc(familyMemberId).collection('allowanceRequests');
+    await collection.add({
+      'amount': amount,
+      'reason': reason,
+      'status': 'pending',
+      'createdAt': firestore.FieldValue.serverTimestamp(),
+      'resolvedAt': null,
+    });
+  }
+
+  Future<void> updateAllowanceRequest(String familyMemberId, String requestId, {
+    required String status,
+    String? resolvedAt,
+  }) async {
+    final doc = _usersCollection.doc(_primaryUserId).collection('familyMembers')
+        .doc(familyMemberId).collection('allowanceRequests').doc(requestId);
+    await doc.update({
+      'status': status,
+      'resolvedAt': resolvedAt ?? firestore.FieldValue.serverTimestamp(),
+    });
+  }
+
   // Loan methods
   
   /// Save a loan to Firestore

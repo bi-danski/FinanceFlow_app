@@ -12,6 +12,7 @@ import 'package:financeflow_app/views/loans/loans_screen.dart';
 import 'package:financeflow_app/views/insights/insights_screen.dart';
 import 'package:financeflow_app/views/profile/profile_screen.dart';
 import 'package:financeflow_app/views/auth/sign_in_screen.dart';
+import 'package:financeflow_app/views/challenges/spending_challenges_screen.dart';
 import 'package:financeflow_app/views/add_transaction/add_transaction_screen.dart';
 import 'package:financeflow_app/views/bills/add_bill_screen.dart';
 import 'package:financeflow_app/views/budgets/add_budget_screen.dart';
@@ -99,6 +100,10 @@ class NavigationService {
     switch (settings.name) {
       case AppConstants.dashboardRoute:
         return MaterialPageRoute(builder: (_) => const DashboardScreen());
+      case AppConstants.spendingChallengesRoute:
+        return MaterialPageRoute(
+          builder: (_) => const SpendingChallengesScreen(),
+        );
       case AppConstants.expensesRoute:
         return MaterialPageRoute(builder: (_) => const ExpensesScreen());
       case AppConstants.incomeRoute:

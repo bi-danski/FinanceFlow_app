@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
@@ -63,6 +64,70 @@ class SpendingChallenge {
     availableBadges = availableBadges ?? [],
     earnedBadges = earnedBadges ?? [],
     rules = rules ?? [];
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'type': type.toString().split('.').last,
+      'difficulty': difficulty.toString().split('.').last,
+      'status': status.toString().split('.').last,
+      'start_date': Timestamp.fromDate(startDate),
+      'end_date': Timestamp.fromDate(endDate),
+      'categories': categories,
+      'target_amount': targetAmount,
+      'current_amount': currentAmount,
+      'icon_code_point': icon.codePoint,
+      'icon_font_family': icon.fontFamily,
+      // ignore: deprecated_member_use
+      'color': color.value,
+      'available_badges': availableBadges.map((b) => b.toMap()).toList(),
+      'earned_badges': earnedBadges.map((b) => b.toMap()).toList(),
+      'rules': rules.map((r) => r.toMap()).toList(),
+    };
+  }
+
+  factory SpendingChallenge.fromMap(Map<String, dynamic> map) {
+    return SpendingChallenge(
+      id: map['id'],
+      title: map['title'] ?? '',
+      description: map['description'] ?? '',
+      type: ChallengeType.values.firstWhere(
+        (e) => e.toString().split('.').last == map['type'],
+        orElse: () => ChallengeType.custom,
+      ),
+      difficulty: ChallengeDifficulty.values.firstWhere(
+        (e) => e.toString().split('.').last == map['difficulty'],
+        orElse: () => ChallengeDifficulty.easy,
+      ),
+      status: ChallengeStatus.values.firstWhere(
+        (e) => e.toString().split('.').last == map['status'],
+        orElse: () => ChallengeStatus.notStarted,
+      ),
+      startDate: (map['start_date'] as Timestamp).toDate(),
+      endDate: (map['end_date'] as Timestamp).toDate(),
+      categories: List<String>.from(map['categories'] ?? []),
+      targetAmount: (map['target_amount'] as num?)?.toDouble() ?? 0.0,
+      currentAmount: (map['current_amount'] as num?)?.toDouble() ?? 0.0,
+      icon: IconData(map['icon_code_point'] ?? Icons.error.codePoint, fontFamily: map['icon_font_family']),
+      color: 
+      // ignore: deprecated_member_use
+      Color(map['color'] ?? Colors.amber.value),
+      availableBadges: (map['available_badges'] as List<dynamic>?)
+          ?.map((b) => ChallengeBadge.fromMap(b as Map<String, dynamic>))
+          .toList() ??
+          [],
+      earnedBadges: (map['earned_badges'] as List<dynamic>?)
+          ?.map((b) => ChallengeBadge.fromMap(b as Map<String, dynamic>))
+          .toList() ??
+          [],
+      rules: (map['rules'] as List<dynamic>?)
+          ?.map((r) => ChallengeRule.fromMap(r as Map<String, dynamic>))
+          .toList() ??
+          [],
+    );
+  }
   
   // Duration of the challenge in days
   int get durationInDays => endDate.difference(startDate).inDays;
@@ -300,47 +365,69 @@ class SpendingChallenge {
 }
 
 class ChallengeBadge {
-  final String id;
   final String name;
   final String description;
   final IconData icon;
   final Color color;
   final double unlockThreshold; // Percentage or amount to unlock
-  
+
   ChallengeBadge({
-    String? id,
     required this.name,
     required this.description,
     required this.icon,
     this.color = Colors.amber,
     required this.unlockThreshold,
-  }) : id = id ?? const Uuid().v4();
-  
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'description': description,
+      'icon_code_point': icon.codePoint,
+      'icon_font_family': icon.fontFamily,
+      // ignore: deprecated_member_use
+      'color': color.value,
+      'unlock_threshold': unlockThreshold,
+    };
+  }
+
+  factory ChallengeBadge.fromMap(Map<String, dynamic> map) {
+    return ChallengeBadge(
+      name: map['name'] ?? '',
+      description: map['description'] ?? '',
+      icon: IconData(map['icon_code_point'] ?? Icons.error.codePoint, fontFamily: map['icon_font_family']),
+      color:
+       // ignore: deprecated_member_use
+      Color(map['color'] ?? Colors.amber.value),
+      unlockThreshold: (map['unlock_threshold'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
   bool isEarned(double currentAmount, double progressPercentage) {
-    // Different badge types might have different unlock conditions
     return progressPercentage >= unlockThreshold;
   }
 }
 
 class ChallengeRule {
-  final String id;
   final String description;
   final bool isSatisfied;
-  
+
   ChallengeRule({
-    String? id,
     required this.description,
     this.isSatisfied = false,
-  }) : id = id ?? const Uuid().v4();
-  
-  ChallengeRule copyWith({
-    String? description,
-    bool? isSatisfied,
-  }) {
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'description': description,
+      'is_satisfied': isSatisfied,
+    };
+  }
+
+  factory ChallengeRule.fromMap(Map<String, dynamic> map) {
     return ChallengeRule(
-      id: id,
-      description: description ?? this.description,
-      isSatisfied: isSatisfied ?? this.isSatisfied,
+      description: map['description'] ?? '',
+      isSatisfied: map['is_satisfied'] ?? false,
     );
   }
 }

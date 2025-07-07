@@ -9,26 +9,112 @@ import '../services/firestore_service.dart';
 import '../services/realtime_data_service.dart';
 
 class IncomeViewModel extends ChangeNotifier {
-  final DatabaseService _databaseService = DatabaseService.instance;
-  final FirestoreService _firestoreService = FirestoreService.instance;
-  final RealtimeDataService _realtimeDataService = RealtimeDataService();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  
+  final DatabaseService _databaseService;
+  final FirestoreService _firestoreService;
+  final RealtimeDataService _realtimeDataService;
+  final FirebaseAuth _auth;
+
   List<IncomeSource> _incomeSources = [];
   bool _isLoading = false;
-  bool _useFirestore = false; // Flag to determine if we should use Firestore or SQLite
+  bool _useFirestore = false;
   StreamSubscription<List<IncomeSource>>? _incomeSourceSubscription;
+  DateTime? _selectedMonth;
   final Logger logger = Logger('IncomeViewModel');
+
+  IncomeViewModel({
+    required DatabaseService databaseService,
+    required FirestoreService firestoreService,
+    required RealtimeDataService realtimeDataService,
+    required FirebaseAuth auth,
+  })  : _databaseService = databaseService,
+        _firestoreService = firestoreService,
+        _realtimeDataService = realtimeDataService,
+        _auth = auth {
+    // Check if user is authenticated to determine data source
+    _checkDataSource();
+    _selectedMonth = DateTime.now();
+  }
 
   List<IncomeSource> get incomeSources => _incomeSources;
   bool get isLoading => _isLoading;
   bool get useFirestore => _useFirestore;
-  
-  IncomeViewModel() {
-    // Check if user is authenticated to determine data source
-    _checkDataSource();
+  DateTime? get selectedMonth => _selectedMonth;
+
+  /// Set selected month and refresh data
+  void setSelectedMonth(DateTime month) {
+    _selectedMonth = DateTime(month.year, month.month, 1);
+    notifyListeners();
   }
-  
+
+  /// Get income sources filtered by month
+  List<IncomeSource> getFilteredIncomeSources() {
+    if (_selectedMonth == null) return _incomeSources;
+    
+    final startDate = DateTime(_selectedMonth!.year, _selectedMonth!.month, 1);
+    final endDate = DateTime(_selectedMonth!.year, _selectedMonth!.month + 1, 0, 23, 59, 59);
+    return _incomeSources.where((income) {
+      final incomeDate = income.date;
+      return incomeDate.isAfter(startDate) && incomeDate.isBefore(endDate);
+    }).toList();
+  }
+
+  /// Get total income for the selected month
+  double getTotalIncome() {
+    final filteredIncome = getFilteredIncomeSources();
+    return filteredIncome.fold(0.0, (sum, income) => sum + income.amount);
+  }
+
+  /// Get recurring income for the selected month
+  List<IncomeSource> getRecurringIncome() {
+    final filteredIncome = getFilteredIncomeSources();
+    return filteredIncome.where((income) => income.isRecurring).toList();
+  }
+
+  /// Get income sources by type for the selected month
+  List<IncomeSource> getIncomeByType(String type) {
+    final filteredIncome = getFilteredIncomeSources();
+    return filteredIncome.where((income) => income.type == type).toList();
+  }
+
+  /// Get recent income entries for the selected month
+  List<IncomeSource> getRecentIncome(int count) {
+    final filteredIncome = getFilteredIncomeSources();
+    return filteredIncome.take(count).toList();
+  }
+
+  /// Get income distribution by type for the selected month
+  Map<String, double> getIncomeDistribution() {
+    final filteredIncome = getFilteredIncomeSources();
+    final Map<String, double> distribution = {};
+    for (final income in filteredIncome) {
+      distribution[income.type] = (distribution[income.type] ?? 0) + income.amount;
+    }
+    return distribution;
+  }
+
+  /// Load income sources from the appropriate data source
+  Future<void> _loadIncomeSources() async {
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      if (_useFirestore) {
+        // For Firestore, load from the stream subscription
+        _incomeSources = await _firestoreService.getIncomeSourcesStream().first;
+      } else {
+        // For SQLite, load from the database
+        _incomeSources = await _databaseService.getIncomeSources();
+      }
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      logger.severe('Error loading income sources: $e');
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   /// Check if we should use Firestore or SQLite
   void _checkDataSource() {
     final user = _auth.currentUser;
@@ -38,149 +124,72 @@ class IncomeViewModel extends ChangeNotifier {
     if (_useFirestore) {
       // Subscribe to real-time updates if using Firestore
       _subscribeToIncomeSources();
-    } else {
-      // Load from SQLite if not using Firestore
-      loadIncomeSources();
     }
   }
-  
+
   /// Subscribe to real-time income source updates from Firestore
   void _subscribeToIncomeSources() {
-    logger.info('Subscribing to income source updates');
-    
-    // Cancel any existing subscription
     _incomeSourceSubscription?.cancel();
-    
-    // Start the income sources stream if not already started
-    _realtimeDataService.startIncomeSourcesStream();
-    
-    // Subscribe to the stream
-    _incomeSourceSubscription = _realtimeDataService.incomeSourcesStream.listen(
-      (incomeSources) {
-        _incomeSources = incomeSources;
-        _isLoading = false;
-        logger.info('Received ${_incomeSources.length} income sources');
-        notifyListeners();
-      },
-      onError: (error) {
-        logger.severe('Error in income source stream: $error');
-        _isLoading = false;
-        notifyListeners();
-      }
-    );
+    _incomeSourceSubscription = _firestoreService.getIncomeSourcesStream().listen((sources) {
+      _incomeSources = sources;
+      notifyListeners();
+    }, onError: (error) {
+      logger.severe('Error subscribing to income sources: $error');
+      _loadIncomeSources();
+    });
   }
 
-  Future<void> loadIncomeSources() async {
-    if (_useFirestore) {
-      // For Firestore, we're already subscribed to real-time updates
-      // Just update the loading state
-      _isLoading = true;
-      notifyListeners();
-      
-      // The stream listener will handle updating income sources
-      // Just set a timeout to ensure we don't stay in loading state indefinitely
-      Future.delayed(const Duration(seconds: 2), () {
-        if (_isLoading) {
-          _isLoading = false;
-          notifyListeners();
-        }
-      });
-    } else {
-      // For SQLite, load from the database
-      _isLoading = true;
-      notifyListeners();
-
-      try {
-        _incomeSources = await _databaseService.getIncomeSources();
-      } catch (e) {
-        logger.info('Error loading income sources: $e');
-      } finally {
-        _isLoading = false;
-        notifyListeners();
-      }
-    }
-  }
-
-  Future<bool> addIncomeSource(IncomeSource incomeSource) async {
+  /// Add a new income source
+  Future<void> addIncomeSource(IncomeSource income) async {
     try {
       if (_useFirestore) {
-        // For Firestore, save to cloud
-        await _firestoreService.saveIncomeSource(incomeSource);
-        // The stream listener will handle updating the UI
+        await _firestoreService.addIncomeSource(income);
       } else {
-        // For SQLite, save to local database
-        if (incomeSource.id == null) {
-          // New income source
-          await _databaseService.insertIncomeSource(incomeSource);
-        } else {
-          // Update existing income source
-          await _databaseService.updateIncomeSource(incomeSource);
-        }
-        await loadIncomeSources();
+        await _databaseService.insertIncomeSource(income);
       }
-      return true;
+      await _loadIncomeSources();
     } catch (e) {
-      logger.info('Error adding/updating income source: $e');
-      return false;
+      logger.severe('Error adding income source: $e');
+      rethrow;
     }
   }
 
-  Future<bool> deleteIncomeSource(int id) async {
+  /// Delete an income source
+  Future<void> deleteIncomeSource(dynamic id) async {
     try {
       if (_useFirestore) {
-        // For Firestore, delete from cloud
         await _firestoreService.deleteIncomeSource(id.toString());
-        // The stream listener will handle updating the UI
       } else {
-        // For SQLite, delete from local database
-        await _databaseService.deleteIncomeSource(id);
-        await loadIncomeSources();
+        await _databaseService.deleteIncomeSource(id is int ? id : int.parse(id.toString()));
       }
-      return true;
+      await _loadIncomeSources();
     } catch (e) {
-      logger.warning('Error deleting income source: $e');
-      return false;
+      logger.severe('Error deleting income source: $e');
+      rethrow;
     }
   }
 
-  double getTotalIncome() {
-    return _incomeSources.fold(0, (sum, source) => sum + source.amount);
+  /// Load income sources from the appropriate data source
+  Future<void> loadIncomeSources() async {
+    await _loadIncomeSources();
   }
 
-  double getTotalIncomeByType(String type) {
-    return _incomeSources
-        .where((source) => source.type == type)
-        .fold(0, (sum, source) => sum + source.amount);
-  }
-
-  List<IncomeSource> getRecurringIncome() {
-    return _incomeSources.where((source) => source.isRecurring).toList();
-  }
-
-  List<IncomeSource> getIncomeByType(String type) {
-    return _incomeSources.where((source) => source.type == type).toList();
-  }
-
-  List<IncomeSource> getRecentIncome(int count) {
-    final sortedSources = List<IncomeSource>.from(_incomeSources)
-      ..sort((a, b) => b.date.compareTo(a.date));
-    return sortedSources.take(count).toList();
-  }
-
-  Map<String, double> getIncomeDistribution() {
-    final distribution = <String, double>{};
-    
-    for (final source in _incomeSources) {
-      if (distribution.containsKey(source.type)) {
-        distribution[source.type] = distribution[source.type]! + source.amount;
+  /// Sync income sources with real-time data service
+  Future<void> syncWithRealtime() async {
+    try {
+      if (_useFirestore) {
+        final sources = await _firestoreService.getIncomeSourcesStream().first;
+        await _realtimeDataService.syncIncomeSources(sources);
       } else {
-        distribution[source.type] = source.amount;
+        final sources = await _databaseService.getIncomeSources();
+        await _realtimeDataService.syncIncomeSources(sources);
       }
+    } catch (e) {
+      logger.severe('Error syncing income sources: $e');
+      rethrow;
     }
-    
-    return distribution;
   }
-  
+
   @override
   void dispose() {
     // Cancel the income source subscription to prevent memory leaks
