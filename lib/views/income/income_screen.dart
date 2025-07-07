@@ -22,7 +22,10 @@ class _IncomeScreenState extends State<IncomeScreen> {
   int _selectedIndex = 7; // Income tab selected
   bool _isLoading = false;
   final String _selectedFilter = 'All';
-  final ValueNotifier<DateTime> _selectedMonthNotifier = ValueNotifier(DateTime.now());
+  // Initialize to first day of current month to match dropdown item values
+  final ValueNotifier<DateTime> _selectedMonthNotifier = ValueNotifier(
+    DateTime(DateTime.now().year, DateTime.now().month, 1),
+  );
 
   @override
   void initState() {
@@ -41,6 +44,8 @@ class _IncomeScreenState extends State<IncomeScreen> {
 
     try {
       final incomeViewModel = Provider.of<IncomeViewModel>(context, listen: false);
+      // Update view model's selected month before loading
+      incomeViewModel.setSelectedMonth(_selectedMonthNotifier.value);
       await incomeViewModel.loadIncomeSources();
     } catch (e) {
       if (e.toString().contains('index')) {

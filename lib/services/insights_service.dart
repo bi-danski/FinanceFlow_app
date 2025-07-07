@@ -1,11 +1,14 @@
 // ignore_for_file: unused_element
 
 import 'dart:math';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 // Use alias to match database_service.dart
 import '../models/budget_model.dart';
 import '../models/goal_model.dart';
+import 'firestore_service.dart';
+
 import '../models/insight_model.dart';
 import '../models/income_source_model.dart';
 import '../models/loan_model.dart';
@@ -16,6 +19,8 @@ import 'database_service.dart';
 class InsightsService {
   static final InsightsService instance = InsightsService._internal();
   final DatabaseService _databaseService = DatabaseService.instance;
+  final FirestoreService _firestoreService = FirestoreService.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   final Random _random = Random();
   final Logger logger = Logger('InsightsService');
 
@@ -25,12 +30,28 @@ class InsightsService {
   Future<List<Insight>> generateInsights() async {
     List<Insight> insights = [];
     
-    // Get all necessary data
-    final transactions = await _databaseService.getTransactions();
-    final budgets = await _databaseService.getBudgets();
-    final goals = await _databaseService.getGoals();
-    final incomeSources = await _databaseService.getIncomeSources();
-    final loans = await _databaseService.getLoans();
+    // Decide data source based on authentication
+    final bool useFirestore = _auth.currentUser != null;
+
+    final transactions = useFirestore
+        ? await _firestoreService.getTransactions()
+        : await _databaseService.getTransactions();
+
+    final budgets = useFirestore
+        ? await _firestoreService.getBudgets()
+        : await _databaseService.getBudgets();
+
+    final goals = useFirestore
+        ? await _firestoreService.getGoals()
+        : await _databaseService.getGoals();
+
+    final incomeSources = useFirestore
+        ? await _firestoreService.getIncomeSources()
+        : await _databaseService.getIncomeSources();
+
+    final loans = useFirestore
+        ? await _firestoreService.getLoans()
+        : await _databaseService.getLoans();
     
     // Generate different types of insights
     insights.addAll(await _generateSpendingPatternInsights(transactions));
@@ -49,6 +70,7 @@ class InsightsService {
   // Get insights from database
   Future<List<Insight>> getInsights() async {
     try {
+      // Currently insights are stored locally even when using Firestore for source data
       return await _databaseService.getInsights();
     } catch (e) {
       logger.info('Error getting insights: $e');

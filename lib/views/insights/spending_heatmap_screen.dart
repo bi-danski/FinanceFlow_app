@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../../viewmodels/transaction_viewmodel_fixed.dart' as vm;
+import '../../models/transaction_model.dart' as app_models;
 import 'package:table_calendar/table_calendar.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -17,162 +20,20 @@ class SpendingHeatmapScreen extends StatefulWidget {
 }
 
 class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
-  int _selectedIndex = 10; // Heatmap index in the drawer
-  DateTime _focusedDay = DateTime.now();
-  DateTime _selectedDay = DateTime.now();
-  CalendarFormat _calendarFormat = CalendarFormat.month;
-  
-  // Mock data - in a real app, this would come from a provider or repository
   late Map<DateTime, SpendingHeatmapData> _spendingData;
   late double _maxDailySpending;
-  
+  late DateTime _focusedDay;
+  late DateTime _selectedDay;
+  CalendarFormat _calendarFormat = CalendarFormat.month;
+  int _selectedIndex = 0;
+
   @override
   void initState() {
     super.initState();
-    _generateMockData();
-  }
-  
-  void _generateMockData() {
-    final now = DateTime.now();
-    final startDate = DateTime(now.year, now.month - 2, 1);
-    final endDate = DateTime(now.year, now.month + 1, 0);
-    
     _spendingData = {};
-    double maxSpending = 0;
-    
-    // Generate random spending data for each day
-    for (DateTime date = startDate; date.isBefore(endDate); date = date.add(const Duration(days: 1))) {
-      // Generate more realistic spending patterns
-      double amount = 0;
-      
-      // Weekends tend to have higher spending
-      if (date.weekday == DateTime.saturday || date.weekday == DateTime.sunday) {
-        amount = 50 + (200 * _randomDouble());
-      } 
-      // Beginning and end of month might have higher spending (bills, rent)
-      else if (date.day <= 5 || date.day >= 25) {
-        amount = 100 + (300 * _randomDouble());
-      }
-      // Regular weekdays
-      else {
-        amount = 20 + (100 * _randomDouble());
-      }
-      
-      // Some days might have no spending
-      if (_randomDouble() < 0.2) {
-        amount = 0;
-      }
-      
-      // Round to 2 decimal places
-      amount = double.parse(amount.toStringAsFixed(2));
-      
-      if (amount > maxSpending) {
-        maxSpending = amount;
-      }
-      
-      final transactions = _generateMockTransactions(date, amount);
-      
-      _spendingData[date] = SpendingHeatmapData(
-        date: date,
-        amount: amount,
-        transactions: transactions,
-      );
-    }
-    
-    _maxDailySpending = maxSpending;
-  }
-  
-  List<SpendingTransaction> _generateMockTransactions(DateTime date, double totalAmount) {
-    if (totalAmount <= 0) return [];
-    
-    final transactions = <SpendingTransaction>[];
-    double remainingAmount = totalAmount;
-    
-    // Categories with their associated icons
-    final categories = [
-      {'name': 'Food', 'icon': Icons.restaurant},
-      {'name': 'Transport', 'icon': Icons.directions_car},
-      {'name': 'Shopping', 'icon': Icons.shopping_bag},
-      {'name': 'Entertainment', 'icon': Icons.movie},
-      {'name': 'Utilities', 'icon': Icons.power},
-      {'name': 'Health', 'icon': Icons.medical_services},
-    ];
-    
-    // Generate 1-4 transactions for the day
-    final transactionCount = 1 + (3 * _randomDouble()).round();
-    
-    for (int i = 0; i < transactionCount; i++) {
-      // Last transaction gets the remaining amount
-      double amount;
-      if (i == transactionCount - 1) {
-        amount = remainingAmount;
-      } else {
-        // Random portion of the remaining amount
-        amount = remainingAmount * (0.3 + (0.5 * _randomDouble()));
-        remainingAmount -= amount;
-      }
-      
-      // Round to 2 decimal places
-      amount = double.parse(amount.toStringAsFixed(2));
-      
-      // Random category
-      final categoryIndex = (categories.length * _randomDouble()).floor();
-      final category = categories[categoryIndex];
-      
-      // Transaction titles based on category
-      final titles = _getTransactionTitles(category['name'] as String);
-      final titleIndex = (titles.length * _randomDouble()).floor();
-      
-      transactions.add(
-        SpendingTransaction(
-          id: 'tx_${date.millisecondsSinceEpoch}_$i',
-          title: titles[titleIndex],
-          amount: amount,
-          date: date,
-          category: category['name'] as String,
-          icon: category['icon'] as IconData,
-        ),
-      );
-    }
-    
-    return transactions;
-  }
-  
-  List<String> _getTransactionTitles(String category) {
-    switch (category) {
-      case 'Food':
-        return ['Grocery Store', 'Restaurant', 'Coffee Shop', 'Fast Food', 'Bakery'];
-      case 'Transport':
-        return ['Gas Station', 'Uber', 'Public Transit', 'Parking', 'Car Service'];
-      case 'Shopping':
-        return ['Clothing Store', 'Electronics', 'Home Goods', 'Online Shopping', 'Department Store'];
-      case 'Entertainment':
-        return ['Movie Theater', 'Concert Tickets', 'Streaming Service', 'Game Store', 'Bar'];
-      case 'Utilities':
-        return ['Electricity Bill', 'Water Bill', 'Internet Service', 'Phone Bill', 'Gas Bill'];
-      case 'Health':
-        return ['Pharmacy', 'Doctor Visit', 'Gym Membership', 'Health Insurance', 'Dental Care'];
-      default:
-        return ['Miscellaneous'];
-    }
-  }
-  
-  double _randomDouble() {
-    return DateTime.now().millisecondsSinceEpoch % 100 / 100;
-  }
-  
-  void _onItemSelected(int index) {
-    setState(() => _selectedIndex = index);
-
-    final String route = NavigationService.routeForDrawerIndex(index);
-
-    if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    }
-
-    if (ModalRoute.of(context)?.settings.name != route) {
-      NavigationService.navigateToReplacement(route);
-    }
+    _maxDailySpending = 0;
+    _focusedDay = DateTime.now();
+    _selectedDay = DateTime.now();
   }
 
   @override
@@ -201,18 +62,90 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
         selectedIndex: _selectedIndex,
         onItemSelected: _onItemSelected,
       ),
-      body: Column(
-        children: [
-          _buildCalendar(),
-          const Divider(height: 1),
-          _buildSelectedDayDetails(),
-          const Divider(height: 1),
-          _buildSpendingInsights(),
-        ],
+      body: Consumer<vm.TransactionViewModel>(
+        builder: (context, txVm, _) {
+          if (txVm.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          _aggregateTransactions(txVm.transactions);
+          return RefreshIndicator(
+            onRefresh: () async => await txVm.loadTransactionsByMonth(DateTime.now()),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                children: [
+                  _buildCalendar(),
+                  _buildLegend(),
+                  const Divider(height: 1),
+                  _buildSelectedDayDetails(),
+                  const Divider(height: 1),
+                  _buildSpendingInsights(),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
-  
+
+  void _aggregateTransactions(List<app_models.TransactionModel> transactions) {
+    setState(() {
+      _spendingData.clear();
+      double max = 0;
+      for (final tx in transactions) {
+        if (tx.type != app_models.TransactionType.expense) continue;
+        final dayKey = DateTime(tx.date.year, tx.date.month, tx.date.day);
+        final current = _spendingData[dayKey]?.amount ?? 0;
+        final newAmount = current + tx.amount.abs();
+        _spendingData[dayKey] = SpendingHeatmapData(
+          date: dayKey,
+          amount: newAmount,
+          transactions: [
+            ..._spendingData[dayKey]?.transactions ?? [], 
+            SpendingTransaction(
+              id: tx.id ?? '',
+              title: tx.title,
+              amount: tx.amount.abs(),
+              date: tx.date,
+              category: tx.category,
+              icon: Icons.receipt,
+            )
+          ],
+        );
+        if (newAmount > max) max = newAmount;
+      }
+      _maxDailySpending = max;
+    });
+  }
+
+  void _onItemSelected(int index) {
+    setState(() => _selectedIndex = index);
+
+    final String route = NavigationService.routeForDrawerIndex(index);
+
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+
+    if (ModalRoute.of(context)?.settings.name != route) {
+      NavigationService.navigateToReplacement(route);
+    }
+  }
+
+  void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
+    setState(() {
+      _selectedDay = selectedDay;
+      _focusedDay = focusedDay;
+    });
+  }
+
+  void _onFormatChanged(CalendarFormat format) {
+    setState(() {
+      _calendarFormat = format;
+    });
+  }
+
   Widget _buildCalendar() {
     return TableCalendar(
       firstDay: DateTime.utc(2023, 1, 1),
@@ -222,17 +155,8 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
       selectedDayPredicate: (day) {
         return isSameDay(_selectedDay, day);
       },
-      onDaySelected: (selectedDay, focusedDay) {
-        setState(() {
-          _selectedDay = selectedDay;
-          _focusedDay = focusedDay;
-        });
-      },
-      onFormatChanged: (format) {
-        setState(() {
-          _calendarFormat = format;
-        });
-      },
+      onDaySelected: _onDaySelected,
+      onFormatChanged: _onFormatChanged,
       onPageChanged: (focusedDay) {
         _focusedDay = focusedDay;
       },
@@ -258,25 +182,30 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
       ),
     );
   }
-  
+
   Widget _buildCalendarDay(DateTime date, {bool isSelected = false, bool isToday = false}) {
     final spendingData = _spendingData[DateTime(date.year, date.month, date.day)];
     final hasSpending = spendingData != null && spendingData.amount > 0;
-    
+
     // Determine heat color based on spending intensity
     Color backgroundColor = Colors.transparent;
     Color textColor = isToday ? AppTheme.primaryColor : Colors.black;
-    
+    // Use brightness estimation for contrast
+    if (hasSpending) {
+      final brightness = ThemeData.estimateBrightnessForColor(backgroundColor);
+      textColor = brightness == Brightness.dark ? Colors.white : Colors.black;
+    }
+
     if (hasSpending) {
       final intensity = spendingData.getIntensityLevel(_maxDailySpending);
       backgroundColor = spendingData.getHeatColor(intensity).withAlpha(isSelected ? 255 : 180);
-      
+
       // For high intensity levels, use white text for better contrast
       if (intensity >= 4) {
         textColor = Colors.white;
       }
     }
-    
+
     // Selected day styling
     if (isSelected) {
       if (!hasSpending) {
@@ -284,12 +213,12 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
       }
       textColor = hasSpending ? textColor : AppTheme.primaryColor;
     }
-    
+
     // Today styling
     if (isToday && !isSelected) {
       textColor = AppTheme.primaryColor;
     }
-    
+
     return Container(
       margin: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -324,11 +253,11 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
       ),
     );
   }
-  
+
   Widget _buildSelectedDayDetails() {
     final selectedDate = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
     final spendingData = _spendingData[selectedDate];
-    
+
     if (spendingData == null || spendingData.amount <= 0) {
       return Container(
         padding: const EdgeInsets.all(16),
@@ -360,7 +289,7 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
         ),
       );
     }
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -416,7 +345,7 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
       ),
     );
   }
-  
+
   Widget _buildTransactionItem(SpendingTransaction transaction) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
@@ -449,12 +378,12 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
       ),
     );
   }
-  
+
   Widget _buildSpendingInsights() {
     // Get data for the selected month
     final selectedMonth = DateTime(_selectedDay.year, _selectedDay.month, 1);
     final daysInMonth = DateTime(_selectedDay.year, _selectedDay.month + 1, 0).day;
-    
+
     // Collect all spending data for the month
     final monthData = <SpendingHeatmapData>[];
     for (int day = 1; day <= daysInMonth; day++) {
@@ -464,25 +393,25 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
         monthData.add(data);
       }
     }
-    
+
     // Calculate monthly insights
     final totalSpending = monthData.fold(0.0, (sum, data) => sum + data.amount);
     final avgDailySpending = monthData.isEmpty ? 0.0 : totalSpending / monthData.length;
     final daysWithSpending = monthData.where((data) => data.amount > 0).length;
     final daysWithoutSpending = daysInMonth - daysWithSpending;
-    
+
     // Find highest spending day
     SpendingHeatmapData? highestDay;
     if (monthData.isNotEmpty) {
       highestDay = monthData.reduce((a, b) => a.amount > b.amount ? a : b);
     }
-    
+
     // Calculate weekday vs weekend spending
     double weekdayTotal = 0;
     double weekendTotal = 0;
     int weekdayCount = 0;
     int weekendCount = 0;
-    
+
     for (final data in monthData) {
       if (data.isWeekend()) {
         weekendTotal += data.amount;
@@ -492,10 +421,10 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
         weekdayCount++;
       }
     }
-    
+
     final weekdayAvg = weekdayCount > 0 ? (weekdayTotal / weekdayCount).toDouble() : 0.0;
     final weekendAvg = weekendCount > 0 ? (weekendTotal / weekendCount).toDouble() : 0.0;
-    
+
     return Expanded(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -558,7 +487,7 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
       ),
     );
   }
-  
+
   Widget _buildInsightCard(String title, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
@@ -604,7 +533,7 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
       .fadeIn(duration: const Duration(milliseconds: 300))
       .slideY(begin: 0.3, end: 0, curve: Curves.easeOutQuad);
   }
-  
+
   Widget _buildHighestSpendingDayCard(SpendingHeatmapData highestDay) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -663,7 +592,7 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
       ),
     );
   }
-  
+
   Widget _buildWeekdayVsWeekendCard(double weekdayAvg, double weekendAvg) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -750,7 +679,9 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
       ),
     );
   }
-  
+
+  Widget _buildLegend() => _buildHeatmapLegend();
+
   Widget _buildHeatmapLegend() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -803,7 +734,7 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
       ],
     );
   }
-  
+
   // Filter options for the spending heatmap
   FilterOptions _filterOptions = const FilterOptions();
   final List<String> _availableCategories = ['Food', 'Transport', 'Shopping', 'Entertainment', 'Utilities', 'Health'];
@@ -849,7 +780,7 @@ class _SpendingHeatmapScreenState extends State<SpendingHeatmapScreen> {
       ),
     );
   }
-  
+
   void _showInfoDialog() {
     showDialog(
       context: context,

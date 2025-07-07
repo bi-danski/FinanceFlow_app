@@ -22,12 +22,16 @@ class ReportsScreen extends StatefulWidget {
 class _ReportsScreenState extends State<ReportsScreen> {
   int _selectedIndex = 3; // Reports tab selected
   String _selectedPeriod = 'Monthly';
+  // Month selection notifier (first day of the month)
+  final ValueNotifier<DateTime> _selectedMonthNotifier = ValueNotifier(
+    DateTime(DateTime.now().year, DateTime.now().month, 1),
+  );
   
   @override
   void initState() {
     super.initState();
     final transactionViewModel = Provider.of<TransactionViewModel>(context, listen: false);
-    transactionViewModel.loadTransactionsByMonth(DateTime.now());
+    transactionViewModel.loadTransactionsByMonth(_selectedMonthNotifier.value);
   }
 
   void _onItemSelected(int index) {
@@ -45,6 +49,60 @@ class _ReportsScreenState extends State<ReportsScreen> {
     setState(() {
       _selectedPeriod = period;
     });
+  }
+
+  @override
+  void dispose() {
+    _selectedMonthNotifier.dispose();
+    super.dispose();
+  }
+
+  Widget _buildMonthSelector() {
+    return ValueListenableBuilder<DateTime>(
+      valueListenable: _selectedMonthNotifier,
+      builder: (context, selectedMonth, _) {
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                const Text(
+                  'Month:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(width: 16),
+                DropdownButton<DateTime>(
+                  value: selectedMonth,
+                  items: _buildMonthDropdownItems(),
+                  onChanged: (DateTime? newValue) {
+                    if (newValue == null) return;
+                    _selectedMonthNotifier.value = newValue;
+                    // Reload transactions for selected month
+                    final txnVM = Provider.of<TransactionViewModel>(context, listen: false);
+                    txnVM.loadTransactionsByMonth(newValue);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  List<DropdownMenuItem<DateTime>> _buildMonthDropdownItems() {
+    final List<DropdownMenuItem<DateTime>> items = [];
+    final now = DateTime.now();
+    for (int i = 0; i < 12; i++) {
+      final month = DateTime(now.year, now.month - i, 1);
+      items.add(
+        DropdownMenuItem(
+          value: month,
+          child: Text(DateFormat('MMMM yyyy').format(month)),
+        ),
+      );
+    }
+    return items;
   }
 
   @override
@@ -74,6 +132,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
               selectedPeriod: _selectedPeriod,
               onPeriodChanged: _onPeriodChanged,
             ),
+            const SizedBox(height: 16),
+            _buildMonthSelector(),
             const SizedBox(height: 16),
             _buildIncomeVsExpensesCard(),
             const SizedBox(height: 16),
